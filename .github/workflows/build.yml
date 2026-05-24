@@ -38,6 +38,18 @@ jobs:
           sudo apt-get update
           sudo bash ./rpi-image-gen/install_deps.sh
 
+      - name: Diag - host environment
+        run: |
+          set -x
+          uname -a
+          lsb_release -a || true
+          id
+          df -h .
+          pwd
+          ls -la
+          echo "--- rpi-image-gen help ---"
+          ./rpi-image-gen/rpi-image-gen help || true
+
       - name: Cache vendored downloads (FFTW source, WiringPi .deb)
         uses: actions/cache@v4
         with:
@@ -45,8 +57,27 @@ jobs:
           key: vendor-${{ hashFiles('layer/zbitx-sbitx.yaml') }}
 
       - name: Build image
+        id: build
+        continue-on-error: true
         run: |
-          sudo ./rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
+          set -x
+          ./rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml 2>&1 | tee build.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload build log (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail job if build failed
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "Build step failed; see uploaded build-log artifact."
+          exit 1
 
       - name: List build artifacts
         run: |
