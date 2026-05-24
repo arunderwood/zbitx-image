@@ -92,8 +92,10 @@ free arm64 runner. The `.img.zst` and SBOM are uploaded as artifacts.
 ## Flashing
 
 Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or
-`dd`. The image includes a default `pi` user with password `raspberry` —
-**change this on first boot.**
+`dd`. The image includes a default `pi` user with placeholder password
+`ChangeMe!1`. **Change it immediately on first boot:** `passwd` at any
+shell, or set a new password via Raspberry Pi Imager's "Edit settings"
+before flashing.
 
 After boot:
 

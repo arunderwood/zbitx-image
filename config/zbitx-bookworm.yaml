@@ -16,7 +16,11 @@ device:
   # First user. zbitxv2 hardcodes /home/pi/sbitx/ paths
   # (see sbitx.c:66 and fft_filter.c:21) so the user MUST be named `pi`.
   user1: pi
-  user1pass: raspberry          # Default; users SHOULD change at first boot
+  # Placeholder password that meets device-base's complexity requirement
+  # (8+ chars, upper + lower + digit + special from @$!%*?&). Users MUST
+  # change this immediately after first boot — it is identical across
+  # every flashed image. See README "Flashing" for the change-it command.
+  user1pass: ChangeMe!1
 
 image:
   layer: image-rpios
