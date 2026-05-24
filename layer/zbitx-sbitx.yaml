@@ -17,8 +17,9 @@
 #
 # X-Env-VarPrefix: sbitx
 #
-# X-Env-Var-srcdir: ${IGTOP}/vendor/sbitx
-# X-Env-Var-srcdir-Desc: Path to the zbitxv2 source tree (vendored as a submodule).
+# X-Env-Var-srcdir: ${SRCROOT}/vendor/sbitx
+# X-Env-Var-srcdir-Desc: Path to the zbitxv2 source tree (vendored as a submodule
+#  at <project>/vendor/sbitx; ${SRCROOT} is set by rpi-image-gen to -S's arg).
 # X-Env-Var-srcdir-Required: n
 # X-Env-Var-srcdir-Valid: string
 # X-Env-Var-srcdir-Set: y
