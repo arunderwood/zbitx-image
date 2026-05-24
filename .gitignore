@@ -1,0 +1,11 @@
+work/
+deploy/
+*.img
+*.img.xz
+*.img.zst
+*.sbom.json
+*.sbom.spdx.json
+.cache/
+
+# Vendored downloads fetched by hooks
+vendor/downloads/

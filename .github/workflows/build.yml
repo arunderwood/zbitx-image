@@ -1,0 +1,75 @@
+name: build-image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: rpi-image-gen build (${{ matrix.release }}, ${{ matrix.arch }})
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [bookworm]
+        arch:    [arm64]
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Free up disk space
+        # rpi-image-gen scratch space is several GB; the default GHA arm runner has ~14 GB free.
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Install rpi-image-gen host dependencies
+        # Per rpi-image-gen docs: mmdebstrap, bdebstrap, genimage + assorted Debian tooling.
+        # The exact list lives in rpi-image-gen/install_deps.sh; calling it is the supported path.
+        run: |
+          sudo apt-get update
+          sudo bash ./rpi-image-gen/install_deps.sh
+
+      - name: Cache vendored downloads (FFTW source, WiringPi .deb)
+        uses: actions/cache@v4
+        with:
+          path: vendor/downloads
+          key: vendor-${{ hashFiles('layer/zbitx-sbitx.yaml') }}
+
+      - name: Build image
+        run: |
+          sudo ./rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
+
+      - name: List build artifacts
+        run: |
+          ls -lh work/zbitx-bookworm/ || true
+          find work -name '*.img*' -o -name '*sbom*' | xargs -r ls -lh
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
+          path: |
+            work/zbitx-bookworm/*.img.zst
+            work/zbitx-bookworm/*.img
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-sbom
+          path: |
+            work/zbitx-bookworm/*sbom*
+            work/zbitx-bookworm/*.spdx.json
+            work/zbitx-bookworm/*.cdx.json
+          if-no-files-found: warn
+          retention-days: 90

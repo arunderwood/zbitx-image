@@ -1,0 +1,146 @@
+# METABEGIN
+# X-Env-Layer-Name: zbitx-sbitx
+# X-Env-Layer-Category: app
+# X-Env-Layer-Desc: zbitxv2 amateur radio SDR transceiver software for the
+#  zBitx v2 hardware (Pi Zero 2 W + sBitx radio board). Installs build
+#  toolchain, WiringPi 3.x, FFTW3, compiles the radio app, and configures
+#  audio, WiFi AP, and firstboot.
+# X-Env-Layer-Version: 0.1.0
+# X-Env-Layer-Requires: debian-bookworm-arm64-multi,
+#  rpi-debian-bookworm,
+#  rpi-misc-utils,
+#  rpi-misc-skel,
+#  rpi-user-credentials,
+#  systemd-net-min,
+#  systemd-timesyncd,
+#  fake-hwclock
+#
+# X-Env-VarPrefix: sbitx
+#
+# X-Env-Var-srcdir: ${IGTOP}/vendor/sbitx
+# X-Env-Var-srcdir-Desc: Path to the zbitxv2 source tree (vendored as a submodule).
+# X-Env-Var-srcdir-Required: n
+# X-Env-Var-srcdir-Valid: string
+# X-Env-Var-srcdir-Set: y
+#
+# X-Env-Var-assetdir: ${DIRECTORY}
+# X-Env-Var-assetdir-Desc: Directory for layer assets (file overlays, scripts).
+# X-Env-Var-assetdir-Required: n
+# X-Env-Var-assetdir-Valid: string
+# X-Env-Var-assetdir-Set: y
+#
+# X-Env-Var-wiringpi_url: https://github.com/WiringPi/WiringPi/releases/download/3.18/wiringpi_3.18_arm64.deb
+# X-Env-Var-wiringpi_url-Desc: WiringPi 3.x .deb download URL (replaces deprecated drogon.net 2.x).
+# X-Env-Var-wiringpi_url-Required: n
+# X-Env-Var-wiringpi_url-Valid: string
+# X-Env-Var-wiringpi_url-Set: y
+#
+# X-Env-Var-wiringpi_sha256: UNVERIFIED_PLACEHOLDER_REPLACE_BEFORE_FIRST_BUILD
+# X-Env-Var-wiringpi_sha256-Desc: SHA256 of the WiringPi .deb. Fetch and verify before pinning.
+# X-Env-Var-wiringpi_sha256-Required: n
+# X-Env-Var-wiringpi_sha256-Valid: string
+# X-Env-Var-wiringpi_sha256-Set: y
+#
+# X-Env-Var-fftw_url: https://www.fftw.org/fftw-3.3.10.tar.gz
+# X-Env-Var-fftw_url-Desc: FFTW3 source tarball.
+# X-Env-Var-fftw_url-Required: n
+# X-Env-Var-fftw_url-Valid: string
+# X-Env-Var-fftw_url-Set: y
+#
+# X-Env-Var-fftw_sha256: 56c932549852cddcfafdab3820b0200c7742675be92179e59e6215b340e26467
+# X-Env-Var-fftw_sha256-Desc: SHA256 of fftw-3.3.10.tar.gz (from fftw.org).
+# X-Env-Var-fftw_sha256-Required: n
+# X-Env-Var-fftw_sha256-Valid: string
+# X-Env-Var-fftw_sha256-Set: y
+# METAEND
+---
+mmdebstrap:
+  packages:
+    # Build toolchain
+    - build-essential
+    - pkg-config
+    - git
+    - ca-certificates
+    - wget
+
+    # zbitxv2 build deps (from install.txt + CLAUDE.md, minus deprecated `ntp`)
+    - libncurses-dev
+    - libasound2-dev
+    - libgtk-3-dev
+    - libsqlite3-dev
+    - sqlite3
+
+    # WiFi AP stack (from setup-ap.sh)
+    - hostapd
+    - dnsmasq
+    - dhcpcd5
+    - iptables
+    - iptables-persistent
+
+    # GTK runtime + X session for the radio UI
+    - xserver-xorg
+    - xinit
+    - openbox
+    - lxterminal
+
+  customize-hooks:
+    # ---- WiringPi 3.x install (Bookworm-port patch #1) ----
+    - |-
+      set -eux
+      curl -fsSL -o "$1/tmp/wiringpi.deb" "$IGconf_sbitx_wiringpi_url"
+      if [ "$IGconf_sbitx_wiringpi_sha256" != "UNVERIFIED_PLACEHOLDER_REPLACE_BEFORE_FIRST_BUILD" ]; then
+        echo "$IGconf_sbitx_wiringpi_sha256  $1/tmp/wiringpi.deb" | sha256sum -c -
+      else
+        echo "WARNING: wiringpi_sha256 is a placeholder. Compute the real SHA256 of $IGconf_sbitx_wiringpi_url and update layer/zbitx-sbitx.yaml before trusting this image."
+      fi
+      chroot "$1" sh -c "apt-get install -y /tmp/wiringpi.deb && rm /tmp/wiringpi.deb"
+
+    # ---- FFTW3 from source (double + single precision) ----
+    - |-
+      set -eux
+      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/build-fftw.sh" "$1/tmp/build-fftw.sh"
+      chroot "$1" /tmp/build-fftw.sh "$IGconf_sbitx_fftw_url" "$IGconf_sbitx_fftw_sha256"
+      rm "$1/tmp/build-fftw.sh"
+
+    # ---- zbitxv2 source → /home/pi/sbitx + build ----
+    - |-
+      set -eux
+      # Copy source into chroot at /home/pi/sbitx (matches hardcoded paths
+      # in sbitx.c:66 and fft_filter.c:21).
+      mkdir -p "$1/home/pi"
+      cp -a "$IGconf_sbitx_srcdir" "$1/home/pi/sbitx"
+      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/build-sbitx.sh" "$1/tmp/build-sbitx.sh"
+      chroot "$1" /tmp/build-sbitx.sh
+      rm "$1/tmp/build-sbitx.sh"
+      # Hand the tree to the pi user (created by rpi-user-credentials).
+      chroot "$1" chown -R pi:pi /home/pi/sbitx
+
+    # ---- Boot + OS configuration ----
+    - |-
+      set -eux
+      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/os-config.sh" "$1/tmp/os-config.sh"
+      OVERLAY_TGZ="$1/tmp/zbitx-overlay.tgz"
+      tar -C "${IGconf_sbitx_assetdir}/files" -czf "$OVERLAY_TGZ" .
+      chroot "$1" /tmp/os-config.sh
+      tar -C "$1" -xzf "$OVERLAY_TGZ"
+      rm "$OVERLAY_TGZ" "$1/tmp/os-config.sh"
+      chroot "$1" systemctl enable hostapd dnsmasq sbitx-firstboot.service uap0.service
+      chroot "$1" systemctl disable NetworkManager 2>/dev/null || true
+
+    # ---- In-chroot smoke tests (Phase 1 CI gate) ----
+    - |-
+      set -eux
+      TEST_TGZ="$1/tmp/zbitx-tests.tgz"
+      tar -C "${IGconf_sbitx_assetdir}/../tests/chroot" -czf "$TEST_TGZ" .
+      mkdir -p "$1/tmp/sbitx-tests"
+      tar -C "$1/tmp/sbitx-tests" -xzf "$TEST_TGZ"
+      chmod +x "$1"/tmp/sbitx-tests/*.sh
+      chroot "$1" sh -c "for t in /tmp/sbitx-tests/*.sh; do echo '== '\"\$t\"' =='; \"\$t\" || exit 1; done"
+      rm -rf "$1/tmp/sbitx-tests" "$TEST_TGZ"
+
+  cleanup-hooks:
+    - |-
+      set -eux
+      # Trim apt caches; rpi-image-gen normally handles this but be explicit.
+      chroot "$1" apt-get clean
+      rm -rf "$1/var/lib/apt/lists/"*

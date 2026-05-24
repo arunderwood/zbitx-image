@@ -1,0 +1,17 @@
+[Unit]
+Description=Create virtual uap0 interface for zbitx WiFi AP
+Before=hostapd.service dnsmasq.service
+Wants=network.target
+After=sys-subsystem-net-devices-wlan0.device
+ConditionPathExists=/sys/class/net/wlan0
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iw dev wlan0 interface add uap0 type __ap
+ExecStart=/sbin/ip addr add 192.168.4.1/24 dev uap0
+ExecStart=/sbin/ip link set uap0 up
+ExecStop=/sbin/iw dev uap0 del
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+[submodule "rpi-image-gen"]
+	path = rpi-image-gen
+	url = https://github.com/raspberrypi/rpi-image-gen.git
+	branch = master
+[submodule "vendor/sbitx"]
+	path = vendor/sbitx
+	url = https://github.com/afarhan/zbitxv2.git

@@ -1,0 +1,27 @@
+# Top-level rpi-image-gen config for the zbitxv2 SDR transceiver image.
+#
+# Target: Raspberry Pi Zero 2 W (arm64) running Debian Bookworm.
+# Build:  rpi-image-gen build -S ./ -c zbitx-bookworm.yaml
+# Output: ./work/zbitx-bookworm/zbitx-bookworm.img (+ SBOM)
+#
+# Note on architecture: rpi-image-gen's `rpizero2w` device layer is
+# arm64-only (requires `rpi-generic64`). The original zbitxv2 codebase
+# was developed against 32-bit Raspbian Buster on the same hardware,
+# so first-boot validation on real hardware is essential — see
+# docs/bookworm-patches.md.
+
+device:
+  layer: rpizero2w
+  hostname: sbitx
+  # First user. zbitxv2 hardcodes /home/pi/sbitx/ paths
+  # (see sbitx.c:66 and fft_filter.c:21) so the user MUST be named `pi`.
+  user1: pi
+  user1pass: raspberry          # Default; users SHOULD change at first boot
+
+image:
+  layer: image-rpios
+  name: zbitx-bookworm
+  compression: zstd
+
+layer:
+  app: zbitx-sbitx

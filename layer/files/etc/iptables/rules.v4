@@ -1,0 +1,16 @@
+# Redirect HTTP traffic on port 80 to sbitx's embedded mongoose web server on 8080.
+# Loaded by iptables-persistent at boot.
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080
+-A OUTPUT -d 127.0.0.1/32 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080
+COMMIT
+
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+COMMIT

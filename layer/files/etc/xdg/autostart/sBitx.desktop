@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=sBitx
+Comment=zBitx SDR amateur radio transceiver
+Exec=/home/pi/sbitx/sbitx
+Path=/home/pi/sbitx
+Icon=/home/pi/sbitx/sbitx_icon.png
+Terminal=false
+Categories=HamRadio;
+X-GNOME-Autostart-enabled=true

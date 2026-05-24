@@ -1,0 +1,14 @@
+[Unit]
+Description=zbitx one-shot first-boot setup
+ConditionPathExists=!/var/lib/sbitx/firstboot-done
+Before=getty.target
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sbitx-firstboot.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
