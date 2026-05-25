@@ -103,6 +103,99 @@ jobs:
           echo "--- *.img* + *.sbom* files ---"
           find work -name '*.img*' -o -name '*.sbom*' -o -name '*.spdx*' -o -name '*.cdx*' 2>/dev/null | xargs -r ls -lh
 
+      - name: Boot-test rootfs in systemd-nspawn
+        # Tier-1 boot validation: boot the produced rootfs as a container,
+        # confirm systemd reaches multi-user.target within 90s. Catches
+        # service-ordering bugs, D-Bus startup issues, lightdm crash-loops,
+        # broken user/shell setup, and similar dynamic failures that the
+        # chroot tests fundamentally can't see.
+        #
+        # Limits: nspawn shares the host kernel, so kernel module loading
+        # (snd-aloop, dtoverlays) + hardware (I2C, GPIO, WM8731 audio) are
+        # not tested. Those still need real-hardware validation.
+        id: nspawn
+        continue-on-error: true
+        run: |
+          set -eux
+          sudo apt-get install -y --no-install-recommends systemd-container
+          ROOTFS=$(ls -d work/chroot-*/filesystem 2>/dev/null | head -1)
+          if [ -z "$ROOTFS" ] || [ ! -d "$ROOTFS" ]; then
+            echo "FAIL: no work/chroot-*/filesystem rootfs found" >&2
+            exit 1
+          fi
+          echo "Booting $ROOTFS via systemd-nspawn..."
+
+          # Boot in background, mirror PID 1's console to a log file we can grep.
+          # --kill-signal=SIGRTMIN+3 is systemd's "poweroff" signal.
+          # --resolv-conf=off avoids stomping the chroot's /etc/resolv.conf.
+          sudo timeout --kill-after=10 120 systemd-nspawn \
+            -D "$ROOTFS" \
+            --boot \
+            --quiet \
+            --machine=zbitx-test \
+            --resolv-conf=off \
+            --kill-signal=SIGRTMIN+3 \
+            2>&1 | tee nspawn.log &
+          NSPAWN_BG=$!
+
+          # Poll for the multi-user marker, or fail after 90s.
+          DEADLINE=$(( $(date +%s) + 90 ))
+          REACHED=0
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if grep -qE "Reached target (multi-user|Multi-User System)" nspawn.log 2>/dev/null; then
+              REACHED=1
+              break
+            fi
+            sleep 2
+          done
+
+          # Clean shutdown of the container.
+          sudo machinectl poweroff zbitx-test 2>/dev/null || true
+          # Give it a few seconds to wind down before we force-kill.
+          for i in 1 2 3 4 5; do
+            kill -0 "$NSPAWN_BG" 2>/dev/null || break
+            sleep 1
+          done
+          sudo pkill -SIGRTMIN+3 -f "systemd-nspawn.*zbitx-test" 2>/dev/null || true
+          wait "$NSPAWN_BG" 2>/dev/null || true
+
+          # Diagnose + emit verdict.
+          if [ "$REACHED" -eq 1 ]; then
+            echo "OK: rootfs reached multi-user.target in systemd-nspawn"
+          else
+            echo "FAIL: rootfs did not reach multi-user.target within 90s" >&2
+            echo "--- nspawn.log (last 80 lines) ---" >&2
+            tail -n 80 nspawn.log >&2 || true
+            exit 1
+          fi
+
+      - name: Upload nspawn boot log (always)
+        if: always() && hashFiles('nspawn.log') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nspawn-log
+          path: nspawn.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Append nspawn log tail to step summary (always)
+        if: always() && hashFiles('nspawn.log') != ''
+        run: |
+          {
+            echo
+            echo "## systemd-nspawn boot log tail"
+            echo
+            echo '```'
+            tail -n 80 nspawn.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if nspawn boot test failed
+        if: steps.nspawn.outcome == 'failure'
+        run: |
+          echo "systemd-nspawn boot test failed; see step summary + nspawn-log artifact."
+          exit 1
+
       - name: Upload image artifact
         # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
         # The .img.zst is what users flash.
