@@ -16,9 +16,12 @@ if ldd "$BIN" | grep -q 'not found'; then
 fi
 
 # Sanity check key libs are linked
+LDD_OUT=$(ldd "$BIN")
 for lib in libwiringPi libasound libfftw3 libfftw3f libsqlite3 libgtk-3 libncurses; do
-    if ! ldd "$BIN" | grep -q "$lib"; then
+    if ! echo "$LDD_OUT" | grep -q "$lib"; then
         echo "FAIL: $BIN not linked against $lib" >&2
+        echo "--- ldd output ---" >&2
+        echo "$LDD_OUT" >&2
         exit 1
     fi
 done

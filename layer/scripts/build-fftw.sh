@@ -17,13 +17,13 @@ SRCDIR=$(find . -maxdepth 1 -type d -name 'fftw-*' | head -n1)
 cd "$SRCDIR"
 
 # Double precision
-./configure --quiet
+./configure --quiet --enable-shared --disable-static
 make -j"$(nproc)"
 make install
 
 # Float precision (same source, rebuild with --enable-float)
 make clean
-./configure --quiet --enable-float
+./configure --quiet --enable-float --enable-shared --disable-static
 make -j"$(nproc)"
 make install
 
