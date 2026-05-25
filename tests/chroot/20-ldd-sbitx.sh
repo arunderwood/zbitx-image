@@ -15,9 +15,12 @@ if ldd "$BIN" | grep -q 'not found'; then
     exit 1
 fi
 
-# Sanity check key libs are linked
+# Sanity check key libs are linked. ncurses is listed in the build script's
+# -l list but no symbols are actually called from the source (only a stray
+# #include in sbitx_gtk.c), so Bookworm's default --as-needed linker
+# correctly drops the DT_NEEDED entry. Don't require it here.
 LDD_OUT=$(ldd "$BIN")
-for lib in libwiringPi libasound libfftw3 libfftw3f libsqlite3 libgtk-3 libncurses; do
+for lib in libwiringPi libasound libfftw3 libfftw3f libsqlite3 libgtk-3; do
     if ! echo "$LDD_OUT" | grep -q "$lib"; then
         echo "FAIL: $BIN not linked against $lib" >&2
         echo "--- ldd output ---" >&2
