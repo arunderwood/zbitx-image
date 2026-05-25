@@ -21,7 +21,14 @@ fi
 # (install.txt is documentation only — not invoked at build time — so
 # this is informational. Recipe declares deps in the layer manifest.)
 
-# ---- Build ----
+# ---- Rebuild ft8_lib/libft8.a for the current arch ----
+# The repo ships a prebuilt libft8.a that was compiled on a 32-bit
+# armhf Pi. On Bookworm arm64 the linker rejects it with:
+#   "ld: ft8_lib/libft8.a: error adding symbols: file in wrong format"
+# Rebuild from source so the static library matches our target arch.
+( cd ft8_lib && make clean && make all && make install )
+
+# ---- Build the sbitx binary ----
 ./build sbitx
 
 # ---- Initialize empty logbook DB ----

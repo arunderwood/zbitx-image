@@ -109,8 +109,6 @@ After boot:
 ## Known limitations
 
 - **Not booted on real hardware yet** — see Status.
-- **WiringPi 3.x SHA256 is a placeholder** in `layer/zbitx-sbitx.yaml`.
-  Compute and pin the real checksum before trusting a build.
 - **QEMU `raspi4b` smoke test omitted** from CI; the Pi Zero 2 W and
   the WM8731 codec are not faithfully emulated.
 - **arm64 not armhf** — original zbitxv2 was developed against 32-bit

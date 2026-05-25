@@ -9,3 +9,5 @@ deploy/
 
 # Vendored downloads fetched by hooks
 vendor/downloads/
+build-log.zip
+build.log

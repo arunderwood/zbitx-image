@@ -36,8 +36,8 @@
 # X-Env-Var-wiringpi_url-Valid: string
 # X-Env-Var-wiringpi_url-Set: y
 #
-# X-Env-Var-wiringpi_sha256: UNVERIFIED_PLACEHOLDER_REPLACE_BEFORE_FIRST_BUILD
-# X-Env-Var-wiringpi_sha256-Desc: SHA256 of the WiringPi .deb. Fetch and verify before pinning.
+# X-Env-Var-wiringpi_sha256: 95553cde829a976f9a546d59c673e4292eab62869c0c0cd4427f1e78a1aad6c6
+# X-Env-Var-wiringpi_sha256-Desc: SHA256 of the WiringPi 3.18 arm64 .deb, computed locally on 2026-05-23.
 # X-Env-Var-wiringpi_sha256-Required: n
 # X-Env-Var-wiringpi_sha256-Valid: string
 # X-Env-Var-wiringpi_sha256-Set: y
@@ -117,14 +117,19 @@ mmdebstrap:
       chroot "$1" chown -R pi:pi /home/pi/sbitx
 
     # ---- Boot + OS configuration ----
+    # Order: lay down file overlays FIRST so os-config.sh and systemctl
+    # have the files to work with. Then run os-config.sh for the
+    # imperative bits (config.txt append, group memberships, perms).
+    # Then enable services that depend on the unit files just installed.
     - |-
       set -eux
-      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/os-config.sh" "$1/tmp/os-config.sh"
       OVERLAY_TGZ="$1/tmp/zbitx-overlay.tgz"
       tar -C "${IGconf_sbitx_assetdir}/files" -czf "$OVERLAY_TGZ" .
-      chroot "$1" /tmp/os-config.sh
       tar -C "$1" -xzf "$OVERLAY_TGZ"
-      rm "$OVERLAY_TGZ" "$1/tmp/os-config.sh"
+      rm "$OVERLAY_TGZ"
+      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/os-config.sh" "$1/tmp/os-config.sh"
+      chroot "$1" /tmp/os-config.sh
+      rm "$1/tmp/os-config.sh"
       chroot "$1" systemctl enable hostapd dnsmasq sbitx-firstboot.service uap0.service
       chroot "$1" systemctl disable NetworkManager 2>/dev/null || true
 
