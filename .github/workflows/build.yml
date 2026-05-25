@@ -77,8 +77,12 @@ jobs:
         # Step-summary content is rendered into the public run-page HTML,
         # which is readable without any API auth — bypasses the 60/hr
         # unauth rate limit on the actions API.
-        if: always() && hashFiles('build.log') != ''
+        if: always()
         run: |
+          if [ ! -f build.log ]; then
+            echo "(no build.log produced)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           {
             echo "## Build log tail"
             echo
