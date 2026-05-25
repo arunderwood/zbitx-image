@@ -83,24 +83,22 @@ fails the build if any test exits non-zero. Tests cover:
 - `sbitx-firstboot.service` is enabled.
 
 What's NOT tested at build time: anything requiring real GPIO/I2C
-hardware, the WM8731 codec, or the actual radio path. That's
-real-hardware validation, gated separately.
+hardware, the WM8731 codec, the actual radio path, or the kernel /
+Pi firmware boot path. Those are real-hardware-only territory —
+flash and validate per the checklist in `docs/bookworm-patches.md`.
 
-### Tier 2 (best-effort): QEMU raspi3b boot
+### What about QEMU?
 
-There's also a Tier-2 QEMU boot test that attempts to boot the produced
-`.img` in `qemu-system-aarch64 -M raspi3b`. **It is not a CI gate** —
-QEMU 8.x's raspi3b emulation is incomplete (no USB, no network, partial
-Pi firmware support) and reliably booting an off-the-shelf RPi OS image
-in it doesn't work in our environment: the kernel never gets serial
-console output up, whether we use `-kernel` directly or let the SD
-firmware chain-load. The step stays in CI because if a future QEMU
-release fixes this, the harness is ready — but a failure does not
-block the artifact upload or fail the job. The qemu-log artifact is
-still uploaded so anyone debugging can see the partial output.
+A previous iteration attempted a Tier-2 QEMU boot test
+(`qemu-system-aarch64 -M raspi3b`) against the produced image, but
+QEMU 8.x's raspi3b emulation is too incomplete to reliably boot an
+off-the-shelf Pi OS image to a serial-visible login prompt — the
+known limitation is around the Pi firmware (start.elf, bootcode.bin,
+GPU dance) and serial-console setup. QEMU 9/10/11 release notes
+don't call out fixes for this. The QEMU test was removed.
 
-For full-system boot validation, real hardware flash is the gate
-(documented in `docs/bookworm-patches.md`).
+The path that genuinely works for "does it boot?" is real-hardware
+flash, which lives outside CI.
 
 ### `.github/workflows/build.yml`
 
