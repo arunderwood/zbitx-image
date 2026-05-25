@@ -58,12 +58,14 @@ for g in audio i2c gpio video plugdev dialout input; do
     fi
 done
 
-# ---- Ensure /home/pi overlays land owned by pi ----
-# The overlay tarball drops .bash_profile and .xinitrc as root:root.
-# Fix ownership + make .xinitrc executable.
-if [ -d /home/pi ]; then
-    chown -R pi:pi /home/pi/.bash_profile /home/pi/.xinitrc 2>/dev/null || true
-    [ -f /home/pi/.xinitrc ] && chmod 0755 /home/pi/.xinitrc
+# ---- Set autologin via raspi-config's nonint API ----
+# `raspi-config nonint do_boot_behaviour B4` configures lightdm to
+# autologin to the desktop session. Our drop-in
+# /etc/lightdm/lightdm.conf.d/50-zbitx-autologin.conf has the same
+# effect and is more transparent; raspi-config call is belt-and-braces.
+# (Skipped if raspi-config isn't available in this chroot for any reason.)
+if command -v raspi-config >/dev/null 2>&1; then
+    raspi-config nonint do_boot_behaviour B4 || true
 fi
 
 # ---- Ensure /usr/local/lib is in ld.so.cache (FFTW lives here) ----

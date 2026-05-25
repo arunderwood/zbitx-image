@@ -78,11 +78,14 @@ mmdebstrap:
     - iptables
     - iptables-persistent
 
-    # GTK runtime + X session for the radio UI
-    - xserver-xorg
-    - xinit
-    - openbox
-    - lxterminal
+    # Stock Raspberry Pi OS Desktop stack (this is the meta-package that
+    # turns RPi OS Lite into the Desktop edition — lightdm, the labwc or
+    # wayfire compositor, pcmanfm, lxterminal, Pixel theme, raspi-config
+    # via dependency chain). Picking this over a hand-rolled openbox
+    # kiosk means lightdm handles autologin natively, and users get the
+    # familiar Pi tooling (raspi-config, file manager, etc.).
+    - raspberrypi-ui-mods
+    - raspi-config
 
   customize-hooks:
     # ---- WiringPi 3.x install (Bookworm-port patch #1) ----

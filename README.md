@@ -19,7 +19,9 @@ upstream-divergent patches and what could still break.
 
 ## What it builds
 
-- Base: Debian Bookworm, arm64.
+- Base: Debian Bookworm + Raspberry Pi apt repo + `raspberrypi-ui-mods`
+  (the meta-package that turns RPi OS Lite into RPi OS Desktop).
+  Arm64.
 - Target hardware: Raspberry Pi Zero 2 W (zBitx v2). The same image
   is expected to work on zBitx v1 hardware via the runtime hardware
   auto-detect at [sbitx.c:1411-1416](https://github.com/afarhan/zbitxv2/blob/main/sbitx.c#L1411).
@@ -114,9 +116,10 @@ SSH directories, and apply your WiFi settings.
 
 After boot:
 
-- The system auto-logs into the `pi` user on tty1 and starts X via
-  `startx`. Openbox launches; `/etc/xdg/autostart/sBitx.desktop` fires
-  the sbitx GTK UI.
+- lightdm auto-logs into the `pi` user (the standard
+  `raspi-config nonint do_boot_behaviour B4` "Desktop with autologin"
+  mode). The Pixel/Wayfire desktop session starts;
+  `/etc/xdg/autostart/sBitx.desktop` fires the sbitx GTK UI.
 - The WiFi AP `zbitx` (passphrase `zbitx12345`) comes up on
   `192.168.4.1`. (Configurable via `/etc/hostapd/hostapd.conf`.)
 - The mongoose web UI is at `http://192.168.4.1/` (iptables redirects
