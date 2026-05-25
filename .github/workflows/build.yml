@@ -99,16 +99,20 @@ jobs:
 
       - name: List build artifacts
         run: |
-          ls -lh work/zbitx-bookworm/ || true
-          find work -name '*.img*' -o -name '*sbom*' | xargs -r ls -lh
+          ls -lhR work/ 2>/dev/null | head -100 || true
+          echo "--- *.img* + *.sbom* files ---"
+          find work -name '*.img*' -o -name '*.sbom*' -o -name '*.spdx*' -o -name '*.cdx*' 2>/dev/null | xargs -r ls -lh
 
       - name: Upload image artifact
+        # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
+        # The .img.zst is what users flash.
         uses: actions/upload-artifact@v4
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
           path: |
-            work/zbitx-bookworm/*.img.zst
-            work/zbitx-bookworm/*.img
+            work/deploy-*/zbitx-bookworm.img.zst
+            work/deploy-*/*.tar.zst
+            work/image-*/zbitx-bookworm.img
           if-no-files-found: warn
           retention-days: 14
 
@@ -117,8 +121,7 @@ jobs:
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-sbom
           path: |
-            work/zbitx-bookworm/*sbom*
-            work/zbitx-bookworm/*.spdx.json
-            work/zbitx-bookworm/*.cdx.json
+            work/deploy-*/*.sbom*
+            work/chroot-*/*.sbom*
           if-no-files-found: warn
           retention-days: 90
