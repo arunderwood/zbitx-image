@@ -139,10 +139,16 @@ jobs:
           NSPAWN_BG=$!
 
           # Poll for the multi-user marker, or fail after 90s.
+          # systemd colorizes its console output, so the line we want
+          # looks like:
+          #   [ OK ] Reached target \x1b[...mmulti-user.target\x1b[...m - Multi-User System.
+          # Strip ANSI escape codes before grepping so the literal
+          # "Reached target multi-user" matches.
           DEADLINE=$(( $(date +%s) + 90 ))
           REACHED=0
+          ansi_strip() { sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$1"; }
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-            if grep -qE "Reached target (multi-user|Multi-User System)" nspawn.log 2>/dev/null; then
+            if [ -f nspawn.log ] && ansi_strip nspawn.log | grep -qE "Reached target multi-user|Multi-User System"; then
               REACHED=1
               break
             fi
