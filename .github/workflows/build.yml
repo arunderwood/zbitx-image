@@ -309,6 +309,10 @@ jobs:
           # have caused the immediate exit). raspi3b sets sensible
           # defaults for cpu + smp.
           echo "Starting QEMU..."
+          # `-serial file:` is more reliable than `-serial stdio` when
+          # the step's stdin is /dev/null (GHA default) — stdio mode
+          # silently disables itself if stdin isn't a tty. We tail the
+          # file from the poll loop to detect boot markers.
           timeout --kill-after=20 480 qemu-system-aarch64 \
             -M raspi3b \
             -m 1G \
@@ -317,10 +321,11 @@ jobs:
             $INITRD_ARG \
             -drive file="$QEMU_IMG",if=sd,format=raw \
             -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 panic=20 systemd.show_status=1 systemd.log_level=info systemd.log_target=console systemd.unit=multi-user.target" \
-            -serial stdio \
+            -serial file:qemu-serial.log \
+            -monitor none \
             -display none \
             -no-reboot \
-            > qemu-serial.log 2>&1 &
+            </dev/null >qemu-stdout.log 2>&1 &
           QPID=$!
           echo "QEMU PID: $QPID"
 
@@ -339,6 +344,8 @@ jobs:
               QEMU_EC=$(wait "$QPID" 2>/dev/null; echo $?)
               echo "QEMU process exited on its own (exit code ${QEMU_EC:-?})"
               echo "--- qemu-serial.log size: $(stat -c%s qemu-serial.log) bytes ---"
+              echo "--- qemu-stdout.log (last 30 lines) ---"
+              tail -n 30 qemu-stdout.log || true
               break
             fi
             sleep 5
@@ -371,6 +378,7 @@ jobs:
           path: |
             qemu.log
             qemu-serial.log
+            qemu-stdout.log
           if-no-files-found: warn
           retention-days: 14
 
