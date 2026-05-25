@@ -281,6 +281,15 @@ jobs:
           INITRD_ARG=""
           [ -f /tmp/qboot/initramfs ] && INITRD_ARG="-initrd /tmp/qboot/initramfs"
 
+          # QEMU's raspi3b machine requires the SD card image size to
+          # be a power of 2. Our deployed image is 1.36 GiB. Make a
+          # copy at 2 GiB and pass that to QEMU; the original image
+          # artifact stays intact for users to flash.
+          cp --reflink=auto "$IMG" /tmp/qboot/sd.img
+          qemu-img resize -f raw /tmp/qboot/sd.img 2G
+          QEMU_IMG=/tmp/qboot/sd.img
+          ls -la "$QEMU_IMG"
+
           # Redirect QEMU's serial output to its OWN file so we grep
           # only kernel/systemd output. (qemu.log also captures the
           # script's `set -x` trace, which would otherwise let grep
@@ -301,7 +310,7 @@ jobs:
             -kernel /tmp/qboot/kernel8.img \
             -dtb /tmp/qboot/board.dtb \
             $INITRD_ARG \
-            -drive file="$IMG",if=sd,format=raw \
+            -drive file="$QEMU_IMG",if=sd,format=raw \
             -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 panic=20 systemd.show_status=1 systemd.log_level=info systemd.log_target=console systemd.unit=multi-user.target" \
             -serial mon:stdio \
             -display none \
