@@ -238,15 +238,21 @@ jobs:
 
           # Show partition table so we can debug if extraction fails.
           /sbin/fdisk -lu "$IMG" || true
+          echo "--- sfdisk -d ---"
+          /sbin/sfdisk -d "$IMG" || true
 
-          # Get the boot partition (FAT32) offset in bytes.
-          BOOT_OFFSET=$(/sbin/fdisk -lu "$IMG" | awk '/W95 FAT|EFI \(FAT|FAT32/{print $2*512; exit}')
-          if [ -z "$BOOT_OFFSET" ] || [ "$BOOT_OFFSET" = "0" ]; then
-            # Fallback: assume sector 8192 (Pi standard)
-            BOOT_OFFSET=$((8192 * 512))
-            echo "Couldn't probe boot offset; defaulting to sector 8192"
+          # Get the boot partition (FAT32 / type=c) start sector via
+          # sfdisk's machine-readable -d output. Line format:
+          #   <img>1 : start=     16384, size=     98304, type=c, bootable
+          # Fall back to the dos table type code 'c' (W95 FAT32 LBA).
+          BOOT_START=$(/sbin/sfdisk -d "$IMG" \
+            | awk -F'[ ,=]+' '/type=c[, ]/{for(i=1;i<=NF;i++) if($i=="start") {print $(i+1); exit}}')
+          if [ -z "$BOOT_START" ]; then
+            echo "FAIL: couldn't find type=c (FAT32) partition in sfdisk -d output"
+            exit 1
           fi
-          echo "Boot partition offset: $BOOT_OFFSET"
+          BOOT_OFFSET=$((BOOT_START * 512))
+          echo "Boot partition: start sector=$BOOT_START, offset=$BOOT_OFFSET bytes"
 
           # List boot partition contents so we know what's available.
           echo "--- Boot partition contents ---"
