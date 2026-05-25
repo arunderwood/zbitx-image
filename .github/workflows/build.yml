@@ -259,27 +259,6 @@ jobs:
           mdir -i "${IMG}@@${BOOT_OFFSET}" || true
 
           mkdir -p /tmp/qboot
-          mcopy -i "${IMG}@@${BOOT_OFFSET}" ::kernel8.img /tmp/qboot/kernel8.img
-          # Pi Zero 2 W uses bcm2710-rpi-zero-2-w.dtb. Try common alternates.
-          for dtb in bcm2710-rpi-zero-2-w.dtb bcm2710-rpi-zero-2.dtb bcm2837-rpi-3-b.dtb bcm2710-rpi-3-b.dtb; do
-            if mcopy -i "${IMG}@@${BOOT_OFFSET}" "::${dtb}" /tmp/qboot/board.dtb 2>/dev/null; then
-              echo "Using DTB: $dtb"
-              break
-            fi
-          done
-          if [ ! -f /tmp/qboot/board.dtb ]; then
-            echo "FAIL: no usable DTB found in boot partition"
-            exit 1
-          fi
-          # initramfs (optional — Pi OS can boot without)
-          mcopy -i "${IMG}@@${BOOT_OFFSET}" ::initramfs8 /tmp/qboot/initramfs 2>/dev/null \
-            || mcopy -i "${IMG}@@${BOOT_OFFSET}" ::initrd.img /tmp/qboot/initramfs 2>/dev/null \
-            || echo "(no initramfs; booting kernel directly)"
-
-          ls -la /tmp/qboot/
-
-          INITRD_ARG=""
-          [ -f /tmp/qboot/initramfs ] && INITRD_ARG="-initrd /tmp/qboot/initramfs"
 
           # QEMU's raspi3b machine requires the SD card image size to
           # be a power of 2. Our deployed image is 1.36 GiB. Make a
@@ -289,6 +268,28 @@ jobs:
           qemu-img resize -f raw /tmp/qboot/sd.img 2G
           QEMU_IMG=/tmp/qboot/sd.img
           ls -la "$QEMU_IMG"
+
+          # Also patch the boot partition's cmdline.txt so console
+          # output goes to ttyAMA0 (which is the only serial port
+          # raspi3b exposes). The shipping image's cmdline.txt uses
+          # `console=serial0` which is a firmware-resolved alias —
+          # QEMU's emulation of the firmware may or may not set it
+          # up correctly. Force ttyAMA0 explicitly.
+          ORIG_CMDLINE=$(mcopy -i "${QEMU_IMG}@@${BOOT_OFFSET}" -n ::cmdline.txt - 2>/dev/null || echo '')
+          echo "Original cmdline.txt: $ORIG_CMDLINE"
+          NEW_CMDLINE="$(echo "$ORIG_CMDLINE" | sed -E 's/console=serial0,[0-9]+/console=ttyAMA0,115200/') quiet=0"
+          echo "Patched cmdline.txt: $NEW_CMDLINE"
+          printf '%s\n' "$NEW_CMDLINE" > /tmp/qboot/cmdline.txt
+          mcopy -i "${QEMU_IMG}@@${BOOT_OFFSET}" -o /tmp/qboot/cmdline.txt ::cmdline.txt
+
+          # Also append `enable_uart=1` to config.txt so the firmware
+          # leaves the UART clock alone (Pi defaults to disabling
+          # UART on no-bluetooth models).
+          mcopy -i "${QEMU_IMG}@@${BOOT_OFFSET}" ::config.txt /tmp/qboot/config.txt
+          if ! grep -q '^enable_uart=1' /tmp/qboot/config.txt; then
+            echo 'enable_uart=1' >> /tmp/qboot/config.txt
+            mcopy -i "${QEMU_IMG}@@${BOOT_OFFSET}" -o /tmp/qboot/config.txt ::config.txt
+          fi
 
           # Redirect QEMU's serial output to its OWN file so we grep
           # only kernel/systemd output. (qemu.log also captures the
@@ -308,19 +309,20 @@ jobs:
           # and `-cpu cortex-a72` (raspi3b is Cortex-A53; mismatch may
           # have caused the immediate exit). raspi3b sets sensible
           # defaults for cpu + smp.
-          echo "Starting QEMU..."
-          # `-serial file:` is more reliable than `-serial stdio` when
-          # the step's stdin is /dev/null (GHA default) — stdio mode
-          # silently disables itself if stdin isn't a tty. We tail the
-          # file from the poll loop to detect boot markers.
+          # Boot via the Pi firmware on the SD card (the canonical
+          # QEMU raspi3b workflow). Previous attempts with `-kernel`
+          # + `-dtb` + `-initrd` produced an exit-code-0, no-output
+          # ghost — QEMU bypasses firmware but the kernel evidently
+          # didn't get serial console set up. Letting the firmware
+          # boot does the full bcm2837 dance including UART setup.
+          # We already patched cmdline.txt (console=ttyAMA0) and
+          # config.txt (enable_uart=1) inside the SD image so the
+          # firmware-loaded kernel emits to the serial we capture.
+          echo "Starting QEMU (firmware boot via SD card)..."
           timeout --kill-after=20 480 qemu-system-aarch64 \
             -M raspi3b \
             -m 1G \
-            -kernel /tmp/qboot/kernel8.img \
-            -dtb /tmp/qboot/board.dtb \
-            $INITRD_ARG \
             -drive file="$QEMU_IMG",if=sd,format=raw \
-            -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 panic=20 systemd.show_status=1 systemd.log_level=info systemd.log_target=console systemd.unit=multi-user.target" \
             -serial file:qemu-serial.log \
             -monitor none \
             -display none \
