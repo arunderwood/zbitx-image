@@ -1,16 +1,30 @@
 #!/bin/sh
-# Assert the firstboot one-shot service is installed and enabled.
+# Assert every systemd unit we expect to fire at boot is enabled.
+# `systemctl is-enabled` in a chroot reads the symlink graph under
+# /etc/systemd/system/*.wants/ — it works without a running PID 1.
 set -eu
 
-if ! systemctl --root=/ is-enabled sbitx-firstboot.service 2>/dev/null | grep -qx enabled; then
-    echo "FAIL: sbitx-firstboot.service is not enabled" >&2
-    systemctl --root=/ status sbitx-firstboot.service 2>&1 || true >&2
+failed=""
+for unit in sbitx-firstboot.service uap0.service hostapd.service dnsmasq.service netfilter-persistent.service; do
+    state=$(systemctl --root=/ is-enabled "$unit" 2>/dev/null || true)
+    case "$state" in
+        enabled|enabled-runtime|static|alias) ;;
+        *)
+            echo "FAIL: $unit is '$state' (expected enabled)" >&2
+            failed="$failed $unit"
+            ;;
+    esac
+done
+
+if [ -n "$failed" ]; then
+    echo "FAIL: not enabled:$failed" >&2
     exit 1
 fi
 
+# sbitx-firstboot.sh itself must be present + executable
 if [ ! -x /usr/local/sbin/sbitx-firstboot.sh ]; then
     echo "FAIL: /usr/local/sbin/sbitx-firstboot.sh missing or not executable" >&2
     exit 1
 fi
 
-echo "OK: sbitx-firstboot service enabled"
+echo "OK: all expected boot units enabled"

@@ -52,10 +52,26 @@ fi
 
 # ---- Add `pi` user to the audio/i2c/gpio groups ----
 # rpi-user-credentials creates `pi`; we ensure group memberships.
-for g in audio i2c gpio video plugdev dialout; do
+for g in audio i2c gpio video plugdev dialout input; do
     if getent group "$g" >/dev/null 2>&1; then
         usermod -a -G "$g" pi 2>/dev/null || true
     fi
 done
+
+# ---- Ensure /home/pi overlays land owned by pi ----
+# The overlay tarball drops .bash_profile and .xinitrc as root:root.
+# Fix ownership + make .xinitrc executable.
+if [ -d /home/pi ]; then
+    chown -R pi:pi /home/pi/.bash_profile /home/pi/.xinitrc 2>/dev/null || true
+    [ -f /home/pi/.xinitrc ] && chmod 0755 /home/pi/.xinitrc
+fi
+
+# ---- Ensure /usr/local/lib is in ld.so.cache (FFTW lives here) ----
+# rpi-image-gen's base ld.so.conf usually has /usr/local/lib already,
+# but be defensive.
+if [ -d /etc/ld.so.conf.d ] && ! grep -hq '^/usr/local/lib' /etc/ld.so.conf /etc/ld.so.conf.d/*.conf 2>/dev/null; then
+    echo /usr/local/lib > /etc/ld.so.conf.d/local-fftw.conf
+fi
+ldconfig
 
 echo "os-config.sh: complete"

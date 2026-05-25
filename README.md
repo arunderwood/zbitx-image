@@ -91,18 +91,37 @@ free arm64 runner. The `.img.zst` and SBOM are uploaded as artifacts.
 
 ## Flashing
 
-Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or
-`dd`. The image includes a default `pi` user with placeholder password
-`ChangeMe!1`. **Change it immediately on first boot:** `passwd` at any
-shell, or set a new password via Raspberry Pi Imager's "Edit settings"
-before flashing.
+The image ships **with no default password** — the `pi` user account
+is created but locked. This mirrors modern Raspberry Pi OS behavior
+(since April 2022 no OS image has shipped with a baked-in default
+password).
+
+Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
+
+1. Pick the downloaded `zbitx-bookworm-arm64-img.zip` artifact (extract
+   the `.img.zst` from inside, decompress with `zstd -d`, point Imager
+   at the resulting `.img`).
+2. Click the gear icon (or "Edit settings…") **before** writing:
+   - **Set username** to `pi` (this is required — zbitxv2 hardcodes
+     `/home/pi/sbitx/` paths).
+   - Set a password of your choice (or upload an SSH key).
+   - Optionally pre-configure WiFi client credentials, locale, etc.
+3. Write to the SD card.
+
+Imager writes a `firstrun.sh` + `userconf.txt` to the boot partition;
+the kernel runs them on first boot to set the password, create the
+SSH directories, and apply your WiFi settings.
 
 After boot:
 
+- The system auto-logs into the `pi` user on tty1 and starts X via
+  `startx`. Openbox launches; `/etc/xdg/autostart/sBitx.desktop` fires
+  the sbitx GTK UI.
 - The WiFi AP `zbitx` (passphrase `zbitx12345`) comes up on
-  `192.168.4.1`.
-- SSH is enabled (one-shot regenerates host keys).
-- The sbitx GTK UI auto-starts on the local display.
+  `192.168.4.1`. (Configurable via `/etc/hostapd/hostapd.conf`.)
+- The mongoose web UI is at `http://192.168.4.1/` (iptables redirects
+  port 80 → 8080 internally).
+- SSH listens on port 22; first boot regenerated unique host keys.
 - For zBitx v1 hardware, edit `/home/pi/sbitx/data/hw_settings.ini`
   and add `hw=4` if the runtime auto-detect picks the wrong path.
 
