@@ -301,28 +301,31 @@ jobs:
           # NOTE: we drop `set -x` for this command and the poll loop
           # so the trace doesn't pollute qemu.log either.
           set +x
+          echo "QEMU version:"
+          qemu-system-aarch64 --version | head -1
+
+          # Drop `sudo` (not needed — QEMU userspace doesn't need root)
+          # and `-cpu cortex-a72` (raspi3b is Cortex-A53; mismatch may
+          # have caused the immediate exit). raspi3b sets sensible
+          # defaults for cpu + smp.
           echo "Starting QEMU..."
-          sudo timeout --kill-after=20 480 qemu-system-aarch64 \
+          timeout --kill-after=20 480 qemu-system-aarch64 \
             -M raspi3b \
-            -cpu cortex-a72 \
             -m 1G \
-            -smp 4 \
             -kernel /tmp/qboot/kernel8.img \
             -dtb /tmp/qboot/board.dtb \
             $INITRD_ARG \
             -drive file="$QEMU_IMG",if=sd,format=raw \
             -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 panic=20 systemd.show_status=1 systemd.log_level=info systemd.log_target=console systemd.unit=multi-user.target" \
-            -serial mon:stdio \
+            -serial stdio \
             -display none \
             -no-reboot \
             > qemu-serial.log 2>&1 &
           QPID=$!
-          echo "QEMU PID: $QPID, serial log: qemu-serial.log"
+          echo "QEMU PID: $QPID"
 
           # Watch for boot marker in QEMU's OWN output, or QEMU exit,
           # whichever first. raspi3b emulation is slow — give it 7 min.
-          # The match patterns are systemd's actual prompt strings,
-          # never appearing in a shell command line.
           DEADLINE=$(( $(date +%s) + 420 ))
           REACHED=0
           ansi_strip() { sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$1"; }
@@ -332,8 +335,10 @@ jobs:
               REACHED=1
               break
             fi
-            if ! sudo kill -0 "$QPID" 2>/dev/null; then
-              echo "QEMU process exited on its own"
+            if ! kill -0 "$QPID" 2>/dev/null; then
+              QEMU_EC=$(wait "$QPID" 2>/dev/null; echo $?)
+              echo "QEMU process exited on its own (exit code ${QEMU_EC:-?})"
+              echo "--- qemu-serial.log size: $(stat -c%s qemu-serial.log) bytes ---"
               break
             fi
             sleep 5
@@ -341,12 +346,12 @@ jobs:
           set -x
 
           # Clean shutdown — SIGTERM, then SIGKILL after a beat.
-          sudo kill -TERM "$QPID" 2>/dev/null || true
+          kill -TERM "$QPID" 2>/dev/null || true
           for i in 1 2 3 4 5; do
-            sudo kill -0 "$QPID" 2>/dev/null || break
+            kill -0 "$QPID" 2>/dev/null || break
             sleep 1
           done
-          sudo kill -KILL "$QPID" 2>/dev/null || true
+          kill -KILL "$QPID" 2>/dev/null || true
           wait "$QPID" 2>/dev/null || true
 
           if [ "$REACHED" -eq 1 ]; then
