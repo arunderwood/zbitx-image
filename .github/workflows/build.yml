@@ -73,10 +73,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Dump build log tail to step summary (always)
+        # Step-summary content is rendered into the public run-page HTML,
+        # which is readable without any API auth — bypasses the 60/hr
+        # unauth rate limit on the actions API.
+        if: always() && hashFiles('build.log') != ''
+        run: |
+          {
+            echo "## Build log tail"
+            echo
+            echo '```'
+            tail -n 200 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Fail job if build failed
         if: steps.build.outcome == 'failure'
         run: |
-          echo "Build step failed; see uploaded build-log artifact."
+          echo "Build step failed; see step summary above + uploaded build-log artifact."
           exit 1
 
       - name: List build artifacts
