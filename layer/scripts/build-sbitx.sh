@@ -44,8 +44,13 @@ cp data/default_hw_settings.ini data/hw_settings.ini
 sed -i '/^hw=/d' data/hw_settings.ini
 
 # ---- Quick sanity: did the binary link? ----
+# Just check existence + first 4 magic bytes for ELF. `file(1)` is not in
+# the chroot's package set and adding it just for this check is silly.
 if [ ! -x ./sbitx ]; then
     echo "ERROR: ./sbitx binary missing after build" >&2
     exit 1
 fi
-file ./sbitx | grep -q ELF
+if ! head -c 4 ./sbitx | grep -q ELF; then
+    echo "ERROR: ./sbitx does not start with ELF magic" >&2
+    exit 1
+fi
