@@ -216,24 +216,41 @@ jobs:
         if: steps.nspawn.outcome == 'success'
         continue-on-error: true
         run: |
+          # Mirror all output of this step to qemu.log from the start so
+          # the artifact upload + step-summary dump capture early failures
+          # (apt-install errors, partition-probe issues, etc.). `set -x`
+          # makes the trace easier to diagnose; `set -e` propagates errors.
+          exec > >(tee -a qemu.log) 2>&1
           set -eux
+
           sudo apt-get install -y --no-install-recommends \
-            qemu-system-arm qemu-utils mtools fdisk
+            qemu-system-arm qemu-utils mtools
 
           IMG=$(ls work/image-*/zbitx-bookworm.img 2>/dev/null | head -1)
           if [ -z "$IMG" ] || [ ! -f "$IMG" ]; then
-            echo "FAIL: no work/image-*/zbitx-bookworm.img found" >&2
+            echo "FAIL: no work/image-*/zbitx-bookworm.img found"
+            ls -la work/ || true
+            ls -la work/image-*/ 2>/dev/null || true
             exit 1
           fi
           echo "Booting $IMG in QEMU raspi3b..."
+          ls -la "$IMG"
+
+          # Show partition table so we can debug if extraction fails.
+          /sbin/fdisk -lu "$IMG" || true
 
           # Get the boot partition (FAT32) offset in bytes.
           BOOT_OFFSET=$(/sbin/fdisk -lu "$IMG" | awk '/W95 FAT|EFI \(FAT|FAT32/{print $2*512; exit}')
           if [ -z "$BOOT_OFFSET" ] || [ "$BOOT_OFFSET" = "0" ]; then
             # Fallback: assume sector 8192 (Pi standard)
             BOOT_OFFSET=$((8192 * 512))
+            echo "Couldn't probe boot offset; defaulting to sector 8192"
           fi
           echo "Boot partition offset: $BOOT_OFFSET"
+
+          # List boot partition contents so we know what's available.
+          echo "--- Boot partition contents ---"
+          mdir -i "${IMG}@@${BOOT_OFFSET}" || true
 
           mkdir -p /tmp/qboot
           mcopy -i "${IMG}@@${BOOT_OFFSET}" ::kernel8.img /tmp/qboot/kernel8.img
@@ -245,8 +262,7 @@ jobs:
             fi
           done
           if [ ! -f /tmp/qboot/board.dtb ]; then
-            echo "FAIL: no usable DTB found in boot partition" >&2
-            mdir -i "${IMG}@@${BOOT_OFFSET}" | head -30 >&2
+            echo "FAIL: no usable DTB found in boot partition"
             exit 1
           fi
           # initramfs (optional — Pi OS can boot without)
@@ -261,6 +277,7 @@ jobs:
 
           # The Pi kernel expects root=/dev/mmcblk0p2 (boot=p1, root=p2).
           # raspi3b in qemu exposes the -drive ...,if=sd as mmcblk0.
+          # Append QEMU's own output to qemu.log too.
           sudo timeout --kill-after=20 480 qemu-system-aarch64 \
             -M raspi3b \
             -cpu cortex-a72 \
@@ -274,7 +291,7 @@ jobs:
             -serial mon:stdio \
             -display none \
             -no-reboot \
-            > qemu.log 2>&1 &
+            >> qemu.log 2>&1 &
           QPID=$!
 
           # Watch for boot marker, or QEMU exit, whichever first.
