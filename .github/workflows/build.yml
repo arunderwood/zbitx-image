@@ -281,9 +281,18 @@ jobs:
           INITRD_ARG=""
           [ -f /tmp/qboot/initramfs ] && INITRD_ARG="-initrd /tmp/qboot/initramfs"
 
+          # Redirect QEMU's serial output to its OWN file so we grep
+          # only kernel/systemd output. (qemu.log also captures the
+          # script's `set -x` trace, which would otherwise let grep
+          # match its own pattern string — yes that happened.)
+          : > qemu-serial.log
+
           # The Pi kernel expects root=/dev/mmcblk0p2 (boot=p1, root=p2).
           # raspi3b in qemu exposes the -drive ...,if=sd as mmcblk0.
-          # Append QEMU's own output to qemu.log too.
+          # NOTE: we drop `set -x` for this command and the poll loop
+          # so the trace doesn't pollute qemu.log either.
+          set +x
+          echo "Starting QEMU..."
           sudo timeout --kill-after=20 480 qemu-system-aarch64 \
             -M raspi3b \
             -cpu cortex-a72 \
@@ -297,26 +306,30 @@ jobs:
             -serial mon:stdio \
             -display none \
             -no-reboot \
-            >> qemu.log 2>&1 &
+            > qemu-serial.log 2>&1 &
           QPID=$!
+          echo "QEMU PID: $QPID, serial log: qemu-serial.log"
 
-          # Watch for boot marker, or QEMU exit, whichever first.
-          # raspi3b emulation is slow — give it 7 min.
+          # Watch for boot marker in QEMU's OWN output, or QEMU exit,
+          # whichever first. raspi3b emulation is slow — give it 7 min.
+          # The match patterns are systemd's actual prompt strings,
+          # never appearing in a shell command line.
           DEADLINE=$(( $(date +%s) + 420 ))
           REACHED=0
           ansi_strip() { sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$1"; }
+          MATCHER='Reached target multi-user\.target|sbitx login:|raspberrypi login:'
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-            if [ -f qemu.log ] && ansi_strip qemu.log | grep -qE "Reached target multi-user|Multi-User System|sbitx login:|raspberrypi login:"; then
+            if [ -s qemu-serial.log ] && ansi_strip qemu-serial.log | grep -qE "$MATCHER"; then
               REACHED=1
               break
             fi
-            # If QEMU died on its own, stop waiting.
             if ! sudo kill -0 "$QPID" 2>/dev/null; then
-              echo "QEMU process exited unexpectedly"
+              echo "QEMU process exited on its own"
               break
             fi
             sleep 5
           done
+          set -x
 
           # Clean shutdown — SIGTERM, then SIGKILL after a beat.
           sudo kill -TERM "$QPID" 2>/dev/null || true
@@ -331,29 +344,31 @@ jobs:
             echo "OK: QEMU boot reached multi-user / login prompt"
           else
             echo "FAIL: QEMU did not reach login within 7min" >&2
-            echo "--- qemu.log (last 80 lines, ANSI-stripped) ---" >&2
-            ansi_strip qemu.log | tail -n 80 >&2 || true
+            echo "--- qemu-serial.log (last 80 lines, ANSI-stripped) ---" >&2
+            ansi_strip qemu-serial.log | tail -n 80 >&2 || true
             exit 1
           fi
 
-      - name: Upload QEMU boot log (always)
-        if: always() && hashFiles('qemu.log') != ''
+      - name: Upload QEMU logs (always)
+        if: always() && (hashFiles('qemu.log') != '' || hashFiles('qemu-serial.log') != '')
         uses: actions/upload-artifact@v4
         with:
           name: qemu-log
-          path: qemu.log
+          path: |
+            qemu.log
+            qemu-serial.log
           if-no-files-found: warn
           retention-days: 14
 
       - name: Append QEMU log tail to step summary (always)
-        if: always() && hashFiles('qemu.log') != ''
+        if: always() && hashFiles('qemu-serial.log') != ''
         run: |
           {
             echo
-            echo "## QEMU boot log tail"
+            echo "## QEMU serial-console tail"
             echo
             echo '```'
-            tail -n 100 qemu.log
+            sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' qemu-serial.log | tail -n 100
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
