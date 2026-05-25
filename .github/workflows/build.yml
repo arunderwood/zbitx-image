@@ -202,6 +202,144 @@ jobs:
           echo "systemd-nspawn boot test failed; see step summary + nspawn-log artifact."
           exit 1
 
+      - name: Boot-test image in QEMU (raspi3b)
+        # Tier-2 boot validation: boot the actual produced .img in QEMU
+        # as a Pi 3 (closest emulated SoC to Pi Zero 2 W's BCM2710A1).
+        # Catches things nspawn can't: kernel boot, initramfs, /etc/fstab,
+        # systemd as real PID 1, bootloader cmdline handling.
+        #
+        # Limits: QEMU raspi3b has no USB (no kbd/mouse), no network,
+        # no I2C/audio device emulation. We're just looking for the
+        # login-prompt marker proving systemd reached multi-user.target
+        # via the real boot path.
+        id: qemu
+        if: steps.nspawn.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -eux
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-arm qemu-utils mtools fdisk
+
+          IMG=$(ls work/image-*/zbitx-bookworm.img 2>/dev/null | head -1)
+          if [ -z "$IMG" ] || [ ! -f "$IMG" ]; then
+            echo "FAIL: no work/image-*/zbitx-bookworm.img found" >&2
+            exit 1
+          fi
+          echo "Booting $IMG in QEMU raspi3b..."
+
+          # Get the boot partition (FAT32) offset in bytes.
+          BOOT_OFFSET=$(/sbin/fdisk -lu "$IMG" | awk '/W95 FAT|EFI \(FAT|FAT32/{print $2*512; exit}')
+          if [ -z "$BOOT_OFFSET" ] || [ "$BOOT_OFFSET" = "0" ]; then
+            # Fallback: assume sector 8192 (Pi standard)
+            BOOT_OFFSET=$((8192 * 512))
+          fi
+          echo "Boot partition offset: $BOOT_OFFSET"
+
+          mkdir -p /tmp/qboot
+          mcopy -i "${IMG}@@${BOOT_OFFSET}" ::kernel8.img /tmp/qboot/kernel8.img
+          # Pi Zero 2 W uses bcm2710-rpi-zero-2-w.dtb. Try common alternates.
+          for dtb in bcm2710-rpi-zero-2-w.dtb bcm2710-rpi-zero-2.dtb bcm2837-rpi-3-b.dtb bcm2710-rpi-3-b.dtb; do
+            if mcopy -i "${IMG}@@${BOOT_OFFSET}" "::${dtb}" /tmp/qboot/board.dtb 2>/dev/null; then
+              echo "Using DTB: $dtb"
+              break
+            fi
+          done
+          if [ ! -f /tmp/qboot/board.dtb ]; then
+            echo "FAIL: no usable DTB found in boot partition" >&2
+            mdir -i "${IMG}@@${BOOT_OFFSET}" | head -30 >&2
+            exit 1
+          fi
+          # initramfs (optional — Pi OS can boot without)
+          mcopy -i "${IMG}@@${BOOT_OFFSET}" ::initramfs8 /tmp/qboot/initramfs 2>/dev/null \
+            || mcopy -i "${IMG}@@${BOOT_OFFSET}" ::initrd.img /tmp/qboot/initramfs 2>/dev/null \
+            || echo "(no initramfs; booting kernel directly)"
+
+          ls -la /tmp/qboot/
+
+          INITRD_ARG=""
+          [ -f /tmp/qboot/initramfs ] && INITRD_ARG="-initrd /tmp/qboot/initramfs"
+
+          # The Pi kernel expects root=/dev/mmcblk0p2 (boot=p1, root=p2).
+          # raspi3b in qemu exposes the -drive ...,if=sd as mmcblk0.
+          sudo timeout --kill-after=20 480 qemu-system-aarch64 \
+            -M raspi3b \
+            -cpu cortex-a72 \
+            -m 1G \
+            -smp 4 \
+            -kernel /tmp/qboot/kernel8.img \
+            -dtb /tmp/qboot/board.dtb \
+            $INITRD_ARG \
+            -drive file="$IMG",if=sd,format=raw \
+            -append "root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait console=ttyAMA0,115200 panic=20 systemd.show_status=1 systemd.log_level=info systemd.log_target=console systemd.unit=multi-user.target" \
+            -serial mon:stdio \
+            -display none \
+            -no-reboot \
+            > qemu.log 2>&1 &
+          QPID=$!
+
+          # Watch for boot marker, or QEMU exit, whichever first.
+          # raspi3b emulation is slow — give it 7 min.
+          DEADLINE=$(( $(date +%s) + 420 ))
+          REACHED=0
+          ansi_strip() { sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$1"; }
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if [ -f qemu.log ] && ansi_strip qemu.log | grep -qE "Reached target multi-user|Multi-User System|sbitx login:|raspberrypi login:"; then
+              REACHED=1
+              break
+            fi
+            # If QEMU died on its own, stop waiting.
+            if ! sudo kill -0 "$QPID" 2>/dev/null; then
+              echo "QEMU process exited unexpectedly"
+              break
+            fi
+            sleep 5
+          done
+
+          # Clean shutdown — SIGTERM, then SIGKILL after a beat.
+          sudo kill -TERM "$QPID" 2>/dev/null || true
+          for i in 1 2 3 4 5; do
+            sudo kill -0 "$QPID" 2>/dev/null || break
+            sleep 1
+          done
+          sudo kill -KILL "$QPID" 2>/dev/null || true
+          wait "$QPID" 2>/dev/null || true
+
+          if [ "$REACHED" -eq 1 ]; then
+            echo "OK: QEMU boot reached multi-user / login prompt"
+          else
+            echo "FAIL: QEMU did not reach login within 7min" >&2
+            echo "--- qemu.log (last 80 lines, ANSI-stripped) ---" >&2
+            ansi_strip qemu.log | tail -n 80 >&2 || true
+            exit 1
+          fi
+
+      - name: Upload QEMU boot log (always)
+        if: always() && hashFiles('qemu.log') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-log
+          path: qemu.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Append QEMU log tail to step summary (always)
+        if: always() && hashFiles('qemu.log') != ''
+        run: |
+          {
+            echo
+            echo "## QEMU boot log tail"
+            echo
+            echo '```'
+            tail -n 100 qemu.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if QEMU boot test failed
+        if: steps.qemu.outcome == 'failure'
+        run: |
+          echo "QEMU boot test failed; see step summary + qemu-log artifact."
+          exit 1
+
       - name: Upload image artifact
         # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
         # The .img.zst is what users flash.
