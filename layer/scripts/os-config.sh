@@ -30,8 +30,27 @@ dtparam=audio=off
 EOF
 fi
 
-# ---- PulseAudio bypass (install.txt:44-50) ----
-# Bookworm's PulseAudio shim is harmless if absent; defensive write.
+# ---- Stop the desktop audio stack from grabbing the WM8731 ALSA card ----
+# sbitx talks directly to ALSA (hw:0,0 for the WM8731, hw:1/2/3 for the
+# snd-aloop virtual cards). If PipeWire or PulseAudio is running under
+# the pi desktop session, it grabs the codec via its ALSA backend and
+# sbitx cannot open the device.
+#
+# raspberrypi-ui-mods pulls in pipewire + pipewire-pulse + wireplumber +
+# pulseaudio transitively (via the lxplug-volumepulse / wfplug-volumepulse
+# Recommends chain). Their user units are socket-activated in
+# /etc/systemd/user/sockets.target.wants/ — anyone hitting libpulse's
+# socket triggers the daemon. Mask them globally so they never start
+# for any user; symlinks land at /etc/systemd/user/<unit> -> /dev/null.
+systemctl --global mask \
+    pipewire.socket \
+    pipewire-pulse.socket \
+    wireplumber.service \
+    pulseaudio.socket \
+    pulseaudio.service 2>/dev/null || true
+
+# Belt-and-braces: the upstream install.txt:44-50 bypass for libpulse
+# clients that try to autospawn the daemon despite the masked socket.
 mkdir -p /etc/pulse
 if [ -f /etc/pulse/client.conf ]; then
     if ! grep -q "^autospawn = no" /etc/pulse/client.conf; then
@@ -53,22 +72,9 @@ for g in audio i2c gpio video plugdev dialout input; do
     fi
 done
 
-# ---- Set autologin via raspi-config's nonint API ----
-# `raspi-config nonint do_boot_behaviour B4` configures lightdm to
-# autologin to the desktop session. Our drop-in
-# /etc/lightdm/lightdm.conf.d/50-zbitx-autologin.conf has the same
-# effect and is more transparent; raspi-config call is belt-and-braces.
-# (Skipped if raspi-config isn't available in this chroot for any reason.)
-if command -v raspi-config >/dev/null 2>&1; then
-    raspi-config nonint do_boot_behaviour B4 || true
-fi
-
-# ---- Ensure /usr/local/lib is in ld.so.cache (FFTW lives here) ----
-# rpi-image-gen's base ld.so.conf usually has /usr/local/lib already,
-# but be defensive.
-if [ -d /etc/ld.so.conf.d ] && ! grep -hq '^/usr/local/lib' /etc/ld.so.conf /etc/ld.so.conf.d/*.conf 2>/dev/null; then
-    echo /usr/local/lib > /etc/ld.so.conf.d/local-fftw.conf
-fi
-ldconfig
+# ---- Autologin ----
+# Configured declaratively via /etc/lightdm/lightdm.conf.d/50-zbitx-autologin.conf
+# (laid down by the file overlay). Equivalent to
+# `raspi-config nonint do_boot_behaviour B4`.
 
 echo "os-config.sh: complete"

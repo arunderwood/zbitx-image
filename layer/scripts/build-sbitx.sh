@@ -5,15 +5,15 @@ set -eux
 
 cd /home/pi/sbitx
 
-# ---- Patch setup-ap.sh to skip the archive.debian.org rewrite ----
-# (lines 42-51 force an EOL-Buster repo; harmful on Bookworm).
-# Strategy: comment the apt-sources rewrite block. Survives minor edits to
-# the script by anchoring on a unique sentinel line.
-if grep -q 'archive.debian.org' setup-ap.sh; then
-    sed -i.bak \
-        '/# Patch sources.list/,/^fi$/ s/^/# bookworm-port: /' \
-        setup-ap.sh
-fi
+# Note: upstream's setup-ap.sh contains an archive.debian.org apt-sources
+# rewrite (lines 42-51) that's appropriate for EOL Buster and harmful on
+# Bookworm. The recipe does NOT execute setup-ap.sh at build time — the
+# AP stack is laid down declaratively via layer/files/etc/{hostapd,
+# dnsmasq.d,systemd/system,dhcpcd.conf.d,iptables}. The script is shipped
+# on the flashed image only for reference; an operator who runs it
+# manually on a built image would hit the apt-sources problem, but that's
+# a niche path we don't try to defend against. See docs/bookworm-patches.md
+# section 3.
 
 # ---- Drop ntp/ntpstat apt-installs from install.txt-derived steps ----
 # Bookworm uses systemd-timesyncd; ntputil.c implements NTP directly so

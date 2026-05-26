@@ -28,7 +28,8 @@ upstream-divergent patches and what could still break.
 - Apt packages from [install.txt](https://github.com/afarhan/zbitxv2/blob/main/install.txt)
   minus deprecated `ntp`/`ntpstat`.
 - WiringPi 3.x (Gordon's unofficial fork — drogon.net is offline).
-- FFTW3 built from source (double + single precision).
+- FFTW3 double + single precision from Bookworm packages
+  (`libfftw3-dev` + `libfftw3-single3`).
 - The zbitxv2 binary, built from a pinned submodule SHA.
 - WiFi AP setup (SSID `zbitx`, IP `192.168.4.1`) derived from
   [setup-ap.sh](https://github.com/afarhan/zbitxv2/blob/main/setup-ap.sh).
@@ -50,7 +51,6 @@ zbitxv2-image/
 ├── layer/
 │   ├── zbitx-sbitx.yaml            # the custom layer
 │   ├── scripts/                    # build-time scripts run inside the chroot
-│   │   ├── build-fftw.sh
 │   │   ├── build-sbitx.sh
 │   │   └── os-config.sh
 │   └── files/                      # rootfs file overlays (etc, boot, usr)
@@ -58,10 +58,14 @@ zbitxv2-image/
 ├── docs/
 │   ├── architecture.md
 │   └── bookworm-patches.md
-├── rpi-image-gen/                  # submodule, pinned to v2.6.0
 ├── vendor/sbitx/                   # submodule, pinned zbitxv2 SHA
 └── .github/workflows/build.yml     # CI on ubuntu-24.04-arm
 ```
+
+rpi-image-gen itself is not vendored. CI clones it at a pinned tag
+(`RPI_IMAGE_GEN_REF` in [.github/workflows/build.yml](.github/workflows/build.yml));
+local builders clone it once and point it at this repo with `-S` (see
+"Building locally" below).
 
 ## Building
 
@@ -79,13 +83,28 @@ or Trixie. Practical options:
 ### Building locally
 
 ```bash
+# 1. Clone this recipe (with the zbitxv2 submodule).
 git clone --recurse-submodules <this-repo>
 cd zbitxv2-image
-sudo bash ./rpi-image-gen/install_deps.sh
-sudo ./rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
+
+# 2. Clone rpi-image-gen at the same pinned tag CI uses.
+#    Reuse the same clone across multiple recipe repos if you like.
+git clone --depth=1 --branch v2.6.0 \
+    https://github.com/raspberrypi/rpi-image-gen.git ../rpi-image-gen
+
+# 3. One-time: install rpi-image-gen's host deps.
+sudo bash ../rpi-image-gen/install_deps.sh
+
+# 4. Build. `-S "$PWD"` tells rpi-image-gen to look in *this* repo for
+#    config/ and layer/; nothing in the tool's clone is modified.
+sudo ../rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
 ```
 
 Output: `./work/zbitx-bookworm/zbitx-bookworm.img.zst`.
+
+The pinned rpi-image-gen version lives in
+`.github/workflows/build.yml` (`RPI_IMAGE_GEN_REF`); bumping CI and
+local builds is a single env-var change.
 
 ### Building in CI
 
@@ -129,21 +148,47 @@ After boot:
 - For zBitx v1 hardware, edit `/home/pi/sbitx/data/hw_settings.ini`
   and add `hw=4` if the runtime auto-detect picks the wrong path.
 
+## Security model
+
+This image matches upstream zbitxv2's network posture: **no host
+firewall**. `iptables`'s `*filter` table is left at default-ACCEPT
+policy and the only rules shipped are the NAT redirect for the web UI
+(port 80 → 8080). The WPA2 passphrase on the `zbitx` AP is the
+network-level security boundary; the listening services on the device
+(SSH on 22, mongoose web UI on 8080, telnet CAT server on 8081) are
+reachable from any client associated to the AP.
+
+Operationally, this means:
+
+- **The default AP passphrase is `zbitx12345` and is publicly
+  documented.** Anyone deploying the image outside a controlled RF
+  environment should change it in `/etc/hostapd/hostapd.conf` before
+  putting the radio on the air.
+- **The image has no default password** for the `pi` user — set one
+  via Raspberry Pi Imager's "Edit settings…" pane before flashing
+  (see Flashing above).
+- **TODO**: an optional hardened-firewall layer that defaults INPUT
+  to DROP and allows only the listening services + DHCP/DNS on
+  `uap0` is a candidate for a future version. Not in v0.1.
+
 ## Known limitations
 
 - **Not booted on real hardware yet** — see Status.
 - **QEMU `raspi4b` smoke test omitted** from CI; the Pi Zero 2 W and
   the WM8731 codec are not faithfully emulated.
-- **arm64 not armhf** — original zbitxv2 was developed against 32-bit
-  Raspbian Buster. We're testing whether the GPIO/I2C/audio code paths
-  work under 64-bit Bookworm. Real-hardware validation is essential.
+- **arm64 validation of historically-armhf code paths** — this image
+  targets arm64 on the Pi Zero 2 W. Upstream zbitxv2 was developed
+  against 32-bit Raspbian Buster, so the GPIO/I2C/audio code paths
+  have not been exercised under 64-bit Linux. Real-hardware validation
+  is essential — see [docs/bookworm-patches.md](docs/bookworm-patches.md).
 
 ## Related repos
 
 - [afarhan/zbitxv2](https://github.com/afarhan/zbitxv2) — the radio
   application itself (vendored as `vendor/sbitx`).
 - [raspberrypi/rpi-image-gen](https://github.com/raspberrypi/rpi-image-gen)
-  — the image builder (vendored as `rpi-image-gen`).
+  — the image builder. Cloned at the pinned `RPI_IMAGE_GEN_REF` tag
+  by CI and local builds; not vendored.
 - [WiringPi/WiringPi](https://github.com/WiringPi/WiringPi) — the
   community-maintained 3.x fork of wiringPi.
 

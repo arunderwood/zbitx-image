@@ -7,6 +7,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  # Pinned rpi-image-gen version. Bump by editing this single value;
+  # tags and full SHAs both work. The tool is cloned into $RUNNER_TEMP
+  # rather than vendored in-tree so the recipe repo stays lean.
+  RPI_IMAGE_GEN_REF: v2.6.0
+
 jobs:
   build:
     name: rpi-image-gen build (${{ matrix.release }}, ${{ matrix.arch }})
@@ -31,12 +37,18 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
           df -h /
 
+      - name: Clone rpi-image-gen
+        run: |
+          git clone --depth=1 --branch "$RPI_IMAGE_GEN_REF" \
+            https://github.com/raspberrypi/rpi-image-gen.git \
+            "$RUNNER_TEMP/rpi-image-gen"
+
       - name: Install rpi-image-gen host dependencies
         # Per rpi-image-gen docs: mmdebstrap, bdebstrap, genimage + assorted Debian tooling.
         # The exact list lives in rpi-image-gen/install_deps.sh; calling it is the supported path.
         run: |
           sudo apt-get update
-          sudo bash ./rpi-image-gen/install_deps.sh
+          sudo bash "$RUNNER_TEMP/rpi-image-gen/install_deps.sh"
 
       - name: Diag - host environment
         run: |
@@ -47,21 +59,17 @@ jobs:
           df -h .
           pwd
           ls -la
+          echo "--- rpi-image-gen version ---"
+          ( cd "$RUNNER_TEMP/rpi-image-gen" && git describe --tags --always )
           echo "--- rpi-image-gen help ---"
-          ./rpi-image-gen/rpi-image-gen help || true
-
-      - name: Cache vendored downloads (FFTW source, WiringPi .deb)
-        uses: actions/cache@v4
-        with:
-          path: vendor/downloads
-          key: vendor-${{ hashFiles('layer/zbitx-sbitx.yaml') }}
+          "$RUNNER_TEMP/rpi-image-gen/rpi-image-gen" help || true
 
       - name: Build image
         id: build
         continue-on-error: true
         run: |
           set -x
-          ./rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml 2>&1 | tee build.log
+          "$RUNNER_TEMP/rpi-image-gen/rpi-image-gen" build -S "$PWD" -c zbitx-bookworm.yaml 2>&1 | tee build.log
           exit "${PIPESTATUS[0]}"
 
       - name: Upload build log (always)

@@ -42,17 +42,6 @@
 # X-Env-Var-wiringpi_sha256-Valid: string
 # X-Env-Var-wiringpi_sha256-Set: y
 #
-# X-Env-Var-fftw_url: https://www.fftw.org/fftw-3.3.10.tar.gz
-# X-Env-Var-fftw_url-Desc: FFTW3 source tarball.
-# X-Env-Var-fftw_url-Required: n
-# X-Env-Var-fftw_url-Valid: string
-# X-Env-Var-fftw_url-Set: y
-#
-# X-Env-Var-fftw_sha256: 56c932549852cddcfafdab3820b0200c7742675be92179e59e6215b340e26467
-# X-Env-Var-fftw_sha256-Desc: SHA256 of fftw-3.3.10.tar.gz (from fftw.org).
-# X-Env-Var-fftw_sha256-Required: n
-# X-Env-Var-fftw_sha256-Valid: string
-# X-Env-Var-fftw_sha256-Set: y
 # METAEND
 ---
 mmdebstrap:
@@ -70,6 +59,14 @@ mmdebstrap:
     - libgtk-3-dev
     - libsqlite3-dev
     - sqlite3
+
+    # FFTW3 double + single precision. Upstream install.txt builds from
+    # source, but Bookworm packages FFTW 3.3.10 (still the latest upstream
+    # release as of 2025) for arm64. Using the packaged version avoids
+    # ~3 min of source-build time, a download to trust, and a SHA to
+    # maintain, with no functional difference for sbitx.
+    - libfftw3-dev
+    - libfftw3-single3
 
     # WiFi AP stack (from setup-ap.sh)
     - hostapd
@@ -92,19 +89,8 @@ mmdebstrap:
     - |-
       set -eux
       curl -fsSL -o "$1/tmp/wiringpi.deb" "$IGconf_sbitx_wiringpi_url"
-      if [ "$IGconf_sbitx_wiringpi_sha256" != "UNVERIFIED_PLACEHOLDER_REPLACE_BEFORE_FIRST_BUILD" ]; then
-        echo "$IGconf_sbitx_wiringpi_sha256  $1/tmp/wiringpi.deb" | sha256sum -c -
-      else
-        echo "WARNING: wiringpi_sha256 is a placeholder. Compute the real SHA256 of $IGconf_sbitx_wiringpi_url and update layer/zbitx-sbitx.yaml before trusting this image."
-      fi
+      echo "$IGconf_sbitx_wiringpi_sha256  $1/tmp/wiringpi.deb" | sha256sum -c -
       chroot "$1" sh -c "apt-get install -y /tmp/wiringpi.deb && rm /tmp/wiringpi.deb"
-
-    # ---- FFTW3 from source (double + single precision) ----
-    - |-
-      set -eux
-      install -m 0755 "${IGconf_sbitx_assetdir}/scripts/build-fftw.sh" "$1/tmp/build-fftw.sh"
-      chroot "$1" /tmp/build-fftw.sh "$IGconf_sbitx_fftw_url" "$IGconf_sbitx_fftw_sha256"
-      rm "$1/tmp/build-fftw.sh"
 
     # ---- zbitxv2 source → /home/pi/sbitx + build ----
     - |-

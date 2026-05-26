@@ -45,20 +45,24 @@ The custom layer. Declares:
   with `systemd-timesyncd`, which is default-present on Bookworm).
 - A list of `customize-hooks` that:
   1. Install WiringPi 3.x from a downloaded `.deb`.
-  2. Build FFTW3 (double + single precision) from source.
-  3. Copy the zbitxv2 source from `vendor/sbitx/` to `/home/pi/sbitx/`
+  2. Copy the zbitxv2 source from `vendor/sbitx/` to `/home/pi/sbitx/`
      in the chroot, apply Bookworm patches, run `./build sbitx`,
      initialize the SQLite logbook, and seed `hw_settings.ini`.
-  4. Lay down OS-level config (config.txt overlays, systemd units,
+  3. Lay down OS-level config (config.txt overlays, systemd units,
      hostapd/dnsmasq configs, iptables rules, autostart desktop file).
-  5. Run the in-chroot smoke tests.
+  4. Run the in-chroot smoke tests.
+
+FFTW3 (double + single precision) comes from Debian Bookworm packages
+(`libfftw3-dev` + `libfftw3-single3`), which currently track upstream
+3.3.10. Earlier iterations built it from source per upstream's
+`install.txt` — that step is gone because the packaged version is
+identical.
 
 ### `layer/scripts/`
 
 Bash helpers invoked by the layer's hooks. Kept out of the YAML to
 keep the manifest readable:
 
-- `build-fftw.sh` — downloads, verifies, and builds FFTW.
 - `build-sbitx.sh` — applies in-source patches and runs the build.
 - `os-config.sh` — appends to `config.txt`, sets group memberships,
   defensively configures PulseAudio bypass.
@@ -82,6 +86,9 @@ fails the build if any test exits non-zero. Tests cover:
 - AudioInjector dtoverlay ships in Bookworm's raspi-firmware.
 - Expected boot units (`uap0`, `hostapd`, `dnsmasq`,
   `netfilter-persistent`, `lightdm`) are enabled.
+- Desktop audio stack (`pipewire.socket`, `pipewire-pulse.socket`,
+  `wireplumber.service`, `pulseaudio.socket`) is masked so it
+  doesn't grab the WM8731 ALSA card out from under sbitx.
 
 What's NOT tested at build time: anything requiring real GPIO/I2C
 hardware, the WM8731 codec, the actual radio path, or the kernel /
@@ -107,12 +114,19 @@ GHA workflow. Runs on `ubuntu-24.04-arm` (free for public repos
 since 2025), installs rpi-image-gen's host deps, builds the image,
 and uploads both the `.img.zst` and the SBOM as artifacts.
 
-### Submodules
+### External tools and submodules
 
-- `rpi-image-gen/` — pinned to v2.6.0.
-- `vendor/sbitx/` — pinned to the zbitxv2 SHA that was current when
-  the recipe was scaffolded. Bump explicitly when picking up new
-  application changes; each bump is a commit you can review.
+- **rpi-image-gen** is not vendored. The pinned version is the
+  `RPI_IMAGE_GEN_REF` env var in `.github/workflows/build.yml`; CI
+  clones it shallowly into `$RUNNER_TEMP` and passes `-S "$PWD"` so
+  the recipe's `config/` and `layer/` are read from this repo without
+  touching the tool's tree. Local builders do the same — see the
+  README "Building locally" section. This matches upstream's intended
+  usage (the `-S` flag exists for exactly this) and keeps a ~100 MB
+  unrelated toolchain out of every clone of this repo.
+- `vendor/sbitx/` is a submodule pinned to the zbitxv2 SHA that was
+  current when the recipe was scaffolded. Bump explicitly when picking
+  up new application changes; each bump is a commit you can review.
 
 ## Build-time state hygiene
 
