@@ -129,6 +129,29 @@ After boot:
 - For zBitx v1 hardware, edit `/home/pi/sbitx/data/hw_settings.ini`
   and add `hw=4` if the runtime auto-detect picks the wrong path.
 
+## Security model
+
+This image matches upstream zbitxv2's network posture: **no host
+firewall**. `iptables`'s `*filter` table is left at default-ACCEPT
+policy and the only rules shipped are the NAT redirect for the web UI
+(port 80 → 8080). The WPA2 passphrase on the `zbitx` AP is the
+network-level security boundary; the listening services on the device
+(SSH on 22, mongoose web UI on 8080, telnet CAT server on 8081) are
+reachable from any client associated to the AP.
+
+Operationally, this means:
+
+- **The default AP passphrase is `zbitx12345` and is publicly
+  documented.** Anyone deploying the image outside a controlled RF
+  environment should change it in `/etc/hostapd/hostapd.conf` before
+  putting the radio on the air.
+- **The image has no default password** for the `pi` user — set one
+  via Raspberry Pi Imager's "Edit settings…" pane before flashing
+  (see Flashing above).
+- **TODO**: an optional hardened-firewall layer that defaults INPUT
+  to DROP and allows only the listening services + DHCP/DNS on
+  `uap0` is a candidate for a future version. Not in v0.1.
+
 ## Known limitations
 
 - **Not booted on real hardware yet** — see Status.
