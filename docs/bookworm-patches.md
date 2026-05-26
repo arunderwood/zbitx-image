@@ -135,9 +135,8 @@ running on real hardware:
 - The `audioinjector-wm8731-audio.dtbo` overlay may be in a
   different package or path.
 
-The Phase 1 in-chroot test `60-overlays-present.sh` catches the
-dtoverlay regression at build time. The rest will only surface on
-first boot.
+The in-chroot test `60-overlays-present.sh` catches the dtoverlay
+regression at build time. The rest will only surface on first boot.
 
 ## Validation checklist (real hardware)
 

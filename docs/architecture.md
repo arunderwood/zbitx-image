@@ -82,10 +82,19 @@ fails the build if any test exits non-zero. Tests cover:
 - `sbitx` binary links cleanly (no unresolved shared libraries).
 - `hostapd.conf` and `dnsmasq` configs are syntactically valid.
 - SQLite logbook DB exists and has the expected schema.
-- `iptables-restore --test` accepts the rules file.
+- `/etc/iptables/rules.v4` is structurally valid (required tables,
+  COMMITs, and the 80→8080 REDIRECT rule). The full
+  `iptables-restore --test` can't run inside an mmdebstrap chroot
+  because the kernel namespace lacks `CAP_NET_ADMIN`; the live rules
+  are validated at first boot when `iptables-persistent` loads them.
 - AudioInjector dtoverlay ships in Bookworm's raspi-firmware.
 - Expected boot units (`uap0`, `hostapd`, `dnsmasq`,
   `netfilter-persistent`, `lightdm`) are enabled.
+- `pi` user is in the audio/gpio/i2c/spi groups.
+- `config.txt` contains the AudioInjector dtoverlay + the GPIO/I2C/I2S
+  enable lines.
+- The ld.so cache resolves `libfftw3` / `libfftw3f`.
+- lightdm autologin is configured for the `pi` user.
 - Desktop audio stack (`pipewire.socket`, `pipewire-pulse.socket`,
   `wireplumber.service`, `pulseaudio.socket`) is masked so it
   doesn't grab the WM8731 ALSA card out from under sbitx.
@@ -95,24 +104,37 @@ hardware, the WM8731 codec, the actual radio path, or the kernel /
 Pi firmware boot path. Those are real-hardware-only territory —
 flash and validate per the checklist in `docs/bookworm-patches.md`.
 
+### Tier-1 boot validation: systemd-nspawn
+
+After the image build succeeds, CI boots the produced rootfs as a
+systemd-nspawn container and confirms PID 1 reaches
+`multi-user.target` within 90 seconds. This catches dynamic
+failures that the static in-chroot tests can't see: service
+ordering bugs, D-Bus startup issues, lightdm crash-loops, broken
+user/shell setup, and similar.
+
+Limits: nspawn shares the host kernel, so kernel module loading
+(`snd-aloop`, dtoverlays) and any hardware-touching code (I2C,
+GPIO, WM8731 audio) are not exercised. The boot log is uploaded
+as the `nspawn-log` artifact and tailed into the run's step
+summary on every run.
+
 ### What about QEMU?
 
-A previous iteration attempted a Tier-2 QEMU boot test
-(`qemu-system-aarch64 -M raspi3b`) against the produced image, but
-QEMU 8.x's raspi3b emulation is too incomplete to reliably boot an
-off-the-shelf Pi OS image to a serial-visible login prompt — the
-known limitation is around the Pi firmware (start.elf, bootcode.bin,
-GPU dance) and serial-console setup. QEMU 9/10/11 release notes
-don't call out fixes for this. The QEMU test was removed.
-
-The path that genuinely works for "does it boot?" is real-hardware
-flash, which lives outside CI.
+A previous iteration attempted a Tier-2 QEMU boot test against the
+produced SD image. QEMU's `raspi3b`/`raspi4b` machines are too
+incomplete to reliably boot an off-the-shelf Pi OS image to a
+serial-visible login prompt (Pi firmware / GPU init, serial-console
+setup). After several iterations trying to make it stable, the
+QEMU test was removed. Real-hardware flash is the path that
+genuinely works for "does it boot?", and lives outside CI.
 
 ### `.github/workflows/build.yml`
 
 GHA workflow. Runs on `ubuntu-24.04-arm` (free for public repos
 since 2025), installs rpi-image-gen's host deps, builds the image,
-and uploads both the `.img.zst` and the SBOM as artifacts.
+runs the Tier-1 nspawn boot test, and uploads the `.img.zst`, the
+SBOM, the build log, and the nspawn log as artifacts.
 
 ### External tools and submodules
 

@@ -54,12 +54,12 @@ zbitxv2-image/
 │   │   ├── build-sbitx.sh
 │   │   └── os-config.sh
 │   └── files/                      # rootfs file overlays (etc, boot, usr)
-├── tests/chroot/                   # in-chroot smoke tests (Phase 1 gate)
+├── tests/chroot/                   # in-chroot smoke tests (build-time gate)
 ├── docs/
-│   ├── architecture.md
-│   └── bookworm-patches.md
+│   ├── architecture.md             # recipe layout + validation tiers
+│   └── bookworm-patches.md         # divergences from upstream zbitxv2
 ├── vendor/sbitx/                   # submodule, pinned zbitxv2 SHA
-└── .github/workflows/build.yml     # CI on ubuntu-24.04-arm
+└── .github/workflows/build.yml     # CI on ubuntu-24.04-arm + nspawn boot test
 ```
 
 rpi-image-gen itself is not vendored. CI clones it at a pinned tag
@@ -109,7 +109,10 @@ local builds is a single env-var change.
 ### Building in CI
 
 Push to a branch and let `.github/workflows/build.yml` build it on a
-free arm64 runner. The `.img.zst` and SBOM are uploaded as artifacts.
+free arm64 runner. After the build, the workflow boots the rootfs in
+systemd-nspawn and checks that PID 1 reaches `multi-user.target`. The
+`.img.zst`, SBOM, build log, and nspawn boot log are uploaded as
+artifacts.
 
 ## Flashing
 
@@ -174,8 +177,12 @@ Operationally, this means:
 ## Known limitations
 
 - **Not booted on real hardware yet** — see Status.
-- **QEMU `raspi4b` smoke test omitted** from CI; the Pi Zero 2 W and
-  the WM8731 codec are not faithfully emulated.
+- **No QEMU boot test in CI.** QEMU's `raspi3b`/`raspi4b` machines
+  don't emulate the Pi firmware path well enough to reliably boot a
+  Pi OS image to a login prompt, and the WM8731 codec / GPIO / I2C
+  aren't modeled at all. The CI Tier-1 systemd-nspawn boot test
+  catches userspace bootup regressions; everything kernel- or
+  hardware-dependent is real-hardware-only.
 - **arm64 validation of historically-armhf code paths** — this image
   targets arm64 on the Pi Zero 2 W. Upstream zbitxv2 was developed
   against 32-bit Raspbian Buster, so the GPIO/I2C/audio code paths
