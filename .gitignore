@@ -11,3 +11,9 @@ deploy/
 vendor/downloads/
 build-log.zip
 build.log
+qemu-log.zip
+qemu.log
+qemu-serial.log
+qemu-stdout.log
+nspawn-log.zip
+nspawn.log
