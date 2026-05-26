@@ -23,7 +23,9 @@ Build invocation:
 rpi-image-gen build -S <project-dir> -c <config-basename>.yaml
 ```
 
-Output lands at `./work/<image-name>/<image-name>.img.zst`.
+Output lands at `./work/deploy-<version>/<image-name>.img.zst`,
+where `<version>` comes from `git describe --tags --always --dirty`
+(falls back to today's date outside a git checkout).
 
 ## This repo's structure
 

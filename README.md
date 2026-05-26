@@ -100,7 +100,9 @@ sudo bash ../rpi-image-gen/install_deps.sh
 sudo ../rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
 ```
 
-Output: `./work/zbitx-bookworm/zbitx-bookworm.img.zst`.
+Output: `./work/deploy-<version>/zbitx-bookworm.img.zst`, where
+`<version>` is `git describe --tags --always --dirty` (or today's
+date if not a git checkout).
 
 The pinned rpi-image-gen version lives in
 `.github/workflows/build.yml` (`RPI_IMAGE_GEN_REF`); bumping CI and
@@ -118,11 +120,13 @@ is created but locked. This mirrors modern Raspberry Pi OS behavior
 (since April 2022 no OS image has shipped with a baked-in default
 password).
 
-Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/):
+Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+(v1.8.0 or later — it handles `.img.zst` natively, no manual
+decompression needed):
 
-1. Pick the downloaded `zbitx-bookworm-arm64-img.zip` artifact (extract
-   the `.img.zst` from inside, decompress with `zstd -d`, point Imager
-   at the resulting `.img`).
+1. Unzip the downloaded `zbitx-bookworm-arm64-img.zip` artifact and
+   point Imager at the `zbitx-bookworm.img.zst` inside ("Use custom"
+   in the OS picker).
 2. Click the gear icon (or "Edit settings…") **before** writing:
    - **Set username** to `pi` (this is required — zbitxv2 hardcodes
      `/home/pi/sbitx/` paths).
