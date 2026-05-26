@@ -11,6 +11,7 @@ env:
   # Pinned rpi-image-gen version. Bump by editing this single value;
   # tags and full SHAs both work. The tool is cloned into $RUNNER_TEMP
   # rather than vendored in-tree so the recipe repo stays lean.
+  # renovate: datasource=github-tags depName=raspberrypi/rpi-image-gen
   RPI_IMAGE_GEN_REF: v2.6.0
 
 jobs:
