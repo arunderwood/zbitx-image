@@ -53,15 +53,10 @@ for g in audio i2c gpio video plugdev dialout input; do
     fi
 done
 
-# ---- Set autologin via raspi-config's nonint API ----
-# `raspi-config nonint do_boot_behaviour B4` configures lightdm to
-# autologin to the desktop session. Our drop-in
-# /etc/lightdm/lightdm.conf.d/50-zbitx-autologin.conf has the same
-# effect and is more transparent; raspi-config call is belt-and-braces.
-# (Skipped if raspi-config isn't available in this chroot for any reason.)
-if command -v raspi-config >/dev/null 2>&1; then
-    raspi-config nonint do_boot_behaviour B4 || true
-fi
+# ---- Autologin ----
+# Configured declaratively via /etc/lightdm/lightdm.conf.d/50-zbitx-autologin.conf
+# (laid down by the file overlay). Equivalent to
+# `raspi-config nonint do_boot_behaviour B4`.
 
 # ---- Ensure /usr/local/lib is in ld.so.cache (FFTW lives here) ----
 # rpi-image-gen's base ld.so.conf usually has /usr/local/lib already,
