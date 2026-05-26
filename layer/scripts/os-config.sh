@@ -30,8 +30,27 @@ dtparam=audio=off
 EOF
 fi
 
-# ---- PulseAudio bypass (install.txt:44-50) ----
-# Bookworm's PulseAudio shim is harmless if absent; defensive write.
+# ---- Stop the desktop audio stack from grabbing the WM8731 ALSA card ----
+# sbitx talks directly to ALSA (hw:0,0 for the WM8731, hw:1/2/3 for the
+# snd-aloop virtual cards). If PipeWire or PulseAudio is running under
+# the pi desktop session, it grabs the codec via its ALSA backend and
+# sbitx cannot open the device.
+#
+# raspberrypi-ui-mods pulls in pipewire + pipewire-pulse + wireplumber +
+# pulseaudio transitively (via the lxplug-volumepulse / wfplug-volumepulse
+# Recommends chain). Their user units are socket-activated in
+# /etc/systemd/user/sockets.target.wants/ — anyone hitting libpulse's
+# socket triggers the daemon. Mask them globally so they never start
+# for any user; symlinks land at /etc/systemd/user/<unit> -> /dev/null.
+systemctl --global mask \
+    pipewire.socket \
+    pipewire-pulse.socket \
+    wireplumber.service \
+    pulseaudio.socket \
+    pulseaudio.service 2>/dev/null || true
+
+# Belt-and-braces: the upstream install.txt:44-50 bypass for libpulse
+# clients that try to autospawn the daemon despite the masked socket.
 mkdir -p /etc/pulse
 if [ -f /etc/pulse/client.conf ]; then
     if ! grep -q "^autospawn = no" /etc/pulse/client.conf; then

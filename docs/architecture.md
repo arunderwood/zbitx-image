@@ -86,6 +86,9 @@ fails the build if any test exits non-zero. Tests cover:
 - AudioInjector dtoverlay ships in Bookworm's raspi-firmware.
 - Expected boot units (`uap0`, `hostapd`, `dnsmasq`,
   `netfilter-persistent`, `lightdm`) are enabled.
+- Desktop audio stack (`pipewire.socket`, `pipewire-pulse.socket`,
+  `wireplumber.service`, `pulseaudio.socket`) is masked so it
+  doesn't grab the WM8731 ALSA card out from under sbitx.
 
 What's NOT tested at build time: anything requiring real GPIO/I2C
 hardware, the WM8731 codec, the actual radio path, or the kernel /
