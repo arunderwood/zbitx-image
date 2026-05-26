@@ -114,12 +114,19 @@ GHA workflow. Runs on `ubuntu-24.04-arm` (free for public repos
 since 2025), installs rpi-image-gen's host deps, builds the image,
 and uploads both the `.img.zst` and the SBOM as artifacts.
 
-### Submodules
+### External tools and submodules
 
-- `rpi-image-gen/` — pinned to v2.6.0.
-- `vendor/sbitx/` — pinned to the zbitxv2 SHA that was current when
-  the recipe was scaffolded. Bump explicitly when picking up new
-  application changes; each bump is a commit you can review.
+- **rpi-image-gen** is not vendored. The pinned version is the
+  `RPI_IMAGE_GEN_REF` env var in `.github/workflows/build.yml`; CI
+  clones it shallowly into `$RUNNER_TEMP` and passes `-S "$PWD"` so
+  the recipe's `config/` and `layer/` are read from this repo without
+  touching the tool's tree. Local builders do the same — see the
+  README "Building locally" section. This matches upstream's intended
+  usage (the `-S` flag exists for exactly this) and keeps a ~100 MB
+  unrelated toolchain out of every clone of this repo.
+- `vendor/sbitx/` is a submodule pinned to the zbitxv2 SHA that was
+  current when the recipe was scaffolded. Bump explicitly when picking
+  up new application changes; each bump is a commit you can review.
 
 ## Build-time state hygiene
 
