@@ -85,6 +85,25 @@ candidates to upstream once they're proven on real hardware.
   buried armhf assumptions may surface. Real-hardware validation
   is the only way to know.
 
+### 6. Rebuild `ft8_lib/libft8.a` for arm64
+
+- **What**: Run `make clean && make all && make install` inside
+  `ft8_lib/` before invoking the top-level `./build sbitx`.
+- **Why**: The upstream repo commits a prebuilt `ft8_lib/libft8.a`
+  static library that was compiled on a 32-bit armhf Pi. The arm64
+  linker rejects it with `ft8_lib/libft8.a: error adding symbols:
+  file in wrong format`. Rebuilding from source produces an
+  arm64-native archive that links cleanly.
+- **Where**: `layer/scripts/build-sbitx.sh`.
+- **Risk**: Low. `ft8_lib`'s own Makefile knows how to rebuild;
+  we're just exercising it. The only way this breaks is if upstream
+  changes the build system inside `ft8_lib/`.
+- **Upstream fix**: Drop `libft8.a` from the upstream repo entirely
+  and have the top-level `./build` always rebuild. Committing
+  prebuilt static libraries is fragile and breaks any arch other
+  than the one the maintainer happened to build on. Candidate to
+  upstream once the recipe is proven on real hardware.
+
 ## Unknown unknowns
 
 There may be additional Bookworm regressions that only surface when
