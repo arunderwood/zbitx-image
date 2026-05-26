@@ -134,9 +134,11 @@ After boot:
 - **Not booted on real hardware yet** — see Status.
 - **QEMU `raspi4b` smoke test omitted** from CI; the Pi Zero 2 W and
   the WM8731 codec are not faithfully emulated.
-- **arm64 not armhf** — original zbitxv2 was developed against 32-bit
-  Raspbian Buster. We're testing whether the GPIO/I2C/audio code paths
-  work under 64-bit Bookworm. Real-hardware validation is essential.
+- **arm64 validation of historically-armhf code paths** — this image
+  targets arm64 on the Pi Zero 2 W. Upstream zbitxv2 was developed
+  against 32-bit Raspbian Buster, so the GPIO/I2C/audio code paths
+  have not been exercised under 64-bit Linux. Real-hardware validation
+  is essential — see [docs/bookworm-patches.md](docs/bookworm-patches.md).
 
 ## Related repos
 

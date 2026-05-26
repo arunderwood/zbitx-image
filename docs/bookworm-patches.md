@@ -67,19 +67,23 @@ candidates to upstream once they're proven on real hardware.
 - **Future**: Rewrite `setup-ap.sh`'s network bits as NM connection
   profiles. Out of scope for v0.1.
 
-### 5. arm64, not armhf
+### 5. arm64 validation of historically-armhf code paths
 
-- **What**: Build a 64-bit arm image. zbitxv2's original Buster
-  image was armhf.
-- **Why**: rpi-image-gen's `rpizero2w` device layer is arm64-only.
-  Producing an armhf image with rpi-image-gen would require a
-  custom device layer (out of scope for v0.1).
-- **Risk**: Higher than the other patches. zbitxv2's GPIO, I2C,
-  and audio code paths have only been validated under 32-bit
-  Linux. The C source has no architecture-specific assembly and
+- **What**: This image targets arm64 on the Pi Zero 2 W. Upstream
+  zbitxv2 was developed against 32-bit Raspbian Buster (armhf), so
+  the GPIO, I2C, audio, and DSP code paths have not previously been
+  exercised under 64-bit Linux.
+- **Why it's the target**: arm64 is the supported architecture for
+  this image. The Pi Zero 2 W's BCM2710A1 is a 64-bit part, modern
+  Debian and Pi OS releases prioritise arm64, and rpi-image-gen's
+  `rpizero2w` device layer is arm64-native.
+- **Risk**: The C source has no architecture-specific assembly and
   no obvious bitness assumptions, but pointer-size or sizeof()
-  differences could lurk. Real-hardware validation is the only
-  way to know.
+  differences could lurk in code that has only ever run armhf. The
+  `ft8_lib/libft8.a` prebuilt static library committed upstream is
+  armhf — we rebuild it from source (see section 6) but other
+  buried armhf assumptions may surface. Real-hardware validation
+  is the only way to know.
 
 ## Unknown unknowns
 

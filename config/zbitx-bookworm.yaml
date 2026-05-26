@@ -4,11 +4,9 @@
 # Build:  rpi-image-gen build -S ./ -c zbitx-bookworm.yaml
 # Output: ./work/zbitx-bookworm/zbitx-bookworm.img (+ SBOM)
 #
-# Note on architecture: rpi-image-gen's `rpizero2w` device layer is
-# arm64-only (requires `rpi-generic64`). The original zbitxv2 codebase
-# was developed against 32-bit Raspbian Buster on the same hardware,
-# so first-boot validation on real hardware is essential — see
-# docs/bookworm-patches.md.
+# Architecture: arm64. Upstream zbitxv2 historically shipped armhf
+# builds on Buster, so first-boot validation on real hardware is
+# essential for the GPIO/I2C/audio paths — see docs/bookworm-patches.md.
 
 device:
   layer: rpizero2w
