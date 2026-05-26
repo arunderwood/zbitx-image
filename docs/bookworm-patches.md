@@ -40,18 +40,23 @@ candidates to upstream once they're proven on real hardware.
   shelling out to `ntpd`/`ntpstat`, so the packages were never
   load-bearing for the app.
 
-### 3. Skip the `archive.debian.org` source rewrite in setup-ap.sh
+### 3. setup-ap.sh is not executed at build time
 
-- **What**: `setup-ap.sh:42-51` actively rewrites
-  `/etc/apt/sources.list` to point at `archive.debian.org`. On
-  Bookworm (which is current, not archived), this would break apt.
-- **Where**: `layer/scripts/build-sbitx.sh` patches the script with
-  a sed before invoking the build.
-- **Risk**: Low. The patch is anchored on the comment "Patch
-  sources.list" and the closing `fi`; if the upstream script
-  changes structure, the patch may silently no-op (in which case
-  it falls back to "the script runs, fails on Bookworm sources,
-  recipe surfaces the error").
+- **What**: Upstream `setup-ap.sh:42-51` rewrites
+  `/etc/apt/sources.list` to point at `archive.debian.org` — fine
+  on EOL Buster, fatal on Bookworm. Rather than patch the script,
+  the recipe simply does not run it. The AP stack (hostapd,
+  dnsmasq, dhcpcd, iptables, uap0 virtual interface, snd-aloop
+  modprobe) is laid down declaratively via the file overlay in
+  `layer/files/`.
+- **Where**: The static configs live under
+  `layer/files/etc/{hostapd,dnsmasq.d,systemd/system,dhcpcd.conf.d,iptables}`.
+- **Risk**: Low. The recipe ships `setup-ap.sh` to the flashed
+  image at `/home/pi/sbitx/setup-ap.sh` for reference, but doing
+  nothing means an operator who explicitly runs it on a built
+  image will hit the apt-sources rewrite. This is a niche path
+  we don't defend against — by the time the script runs, the AP
+  is already configured.
 
 ### 4. dhcpcd over NetworkManager
 
