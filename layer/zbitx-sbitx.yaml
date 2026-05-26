@@ -92,11 +92,7 @@ mmdebstrap:
     - |-
       set -eux
       curl -fsSL -o "$1/tmp/wiringpi.deb" "$IGconf_sbitx_wiringpi_url"
-      if [ "$IGconf_sbitx_wiringpi_sha256" != "UNVERIFIED_PLACEHOLDER_REPLACE_BEFORE_FIRST_BUILD" ]; then
-        echo "$IGconf_sbitx_wiringpi_sha256  $1/tmp/wiringpi.deb" | sha256sum -c -
-      else
-        echo "WARNING: wiringpi_sha256 is a placeholder. Compute the real SHA256 of $IGconf_sbitx_wiringpi_url and update layer/zbitx-sbitx.yaml before trusting this image."
-      fi
+      echo "$IGconf_sbitx_wiringpi_sha256  $1/tmp/wiringpi.deb" | sha256sum -c -
       chroot "$1" sh -c "apt-get install -y /tmp/wiringpi.deb && rm /tmp/wiringpi.deb"
 
     # ---- FFTW3 from source (double + single precision) ----
