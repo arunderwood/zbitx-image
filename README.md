@@ -37,8 +37,9 @@ upstream-divergent patches and what could still break.
 - `snd-aloop` virtual ALSA cards for WSJT-X integration.
 - AudioInjector WM8731 dtoverlay + GPIO/I2C/I2S enabled in
   `config.txt`.
-- A `sbitx-firstboot.service` one-shot that regenerates SSH host
-  keys, wipes build-time FFTW wisdom, and disables itself.
+- SSH host keys + machine-id + bundled FFTW wisdom deleted at
+  build time so first boot regenerates them naturally (no custom
+  firstboot script needed).
 
 ## Repo layout
 

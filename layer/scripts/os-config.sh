@@ -45,11 +45,6 @@ if [ -f /etc/iptables/rules.v4 ]; then
     chmod 0644 /etc/iptables/rules.v4
 fi
 
-# ---- Firstboot script must be executable ----
-if [ -f /usr/local/sbin/sbitx-firstboot.sh ]; then
-    chmod 0755 /usr/local/sbin/sbitx-firstboot.sh
-fi
-
 # ---- Add `pi` user to the audio/i2c/gpio groups ----
 # rpi-user-credentials creates `pi`; we ensure group memberships.
 for g in audio i2c gpio video plugdev dialout input; do

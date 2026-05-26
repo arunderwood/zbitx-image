@@ -1,0 +1,230 @@
++ sudo apt-get install -y --no-install-recommends qemu-system-arm qemu-utils mtools
+Reading package lists...
+Building dependency tree...
+Reading state information...
+mtools is already the newest version (4.0.43-1build1).
+The following additional packages will be installed:
+  libbrlapi0.8 libcacard0 libdaxctl1 libndctl6 libpcsclite1 libpmem1
+  librdmacm1t64 liburing2 libusbredirparser1t64 qemu-system-common
+  qemu-system-data
+Suggested packages:
+  pcscd samba vde2
+Recommended packages:
+  ipxe-qemu ipxe-qemu-256k-compat-efi-roms qemu-efi-aarch64 qemu-efi-arm
+  qemu-system-gui qemu-system-modules-spice qemu-system-modules-opengl
+  qemu-block-extra
+The following NEW packages will be installed:
+  libbrlapi0.8 libcacard0 libdaxctl1 libndctl6 libpcsclite1 libpmem1
+  librdmacm1t64 liburing2 libusbredirparser1t64 qemu-system-arm
+  qemu-system-common qemu-system-data qemu-utils
+0 upgraded, 13 newly installed, 0 to remove and 193 not upgraded.
+Need to get 15.7 MB of archives.
+After this operation, 90.2 MB of additional disk space will be used.
+Get:1 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libbrlapi0.8 arm64 6.6-4ubuntu5 [31.5 kB]
+Get:2 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libpcsclite1 arm64 2.0.3-1build1 [21.8 kB]
+Get:3 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libcacard0 arm64 1:2.8.0-3build4 [36.3 kB]
+Get:4 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libdaxctl1 arm64 77-2ubuntu2 [21.2 kB]
+Get:5 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libndctl6 arm64 77-2ubuntu2 [63.1 kB]
+Get:6 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libpmem1 arm64 1.13.1-1.1ubuntu2 [36.2 kB]
+Get:7 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 librdmacm1t64 arm64 50.0-2ubuntu0.2 [70.6 kB]
+Get:8 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 liburing2 arm64 2.5-1build1 [21.7 kB]
+Get:9 http://ports.ubuntu.com/ubuntu-ports noble/main arm64 libusbredirparser1t64 arm64 0.13.0-2.1build1 [16.6 kB]
+Get:10 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 qemu-system-common arm64 1:8.2.2+ds-0ubuntu1.16 [1212 kB]
+Get:11 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 qemu-system-data all 1:8.2.2+ds-0ubuntu1.16 [1796 kB]
+Get:12 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 qemu-system-arm arm64 1:8.2.2+ds-0ubuntu1.16 [10.3 MB]
+Get:13 http://ports.ubuntu.com/ubuntu-ports noble-updates/main arm64 qemu-utils arm64 1:8.2.2+ds-0ubuntu1.16 [2036 kB]
+Fetched 15.7 MB in 0s (33.6 MB/s)
+Selecting previously unselected package libbrlapi0.8:arm64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 234256 files and directories currently installed.)
+Preparing to unpack .../00-libbrlapi0.8_6.6-4ubuntu5_arm64.deb ...
+Unpacking libbrlapi0.8:arm64 (6.6-4ubuntu5) ...
+Selecting previously unselected package libpcsclite1:arm64.
+Preparing to unpack .../01-libpcsclite1_2.0.3-1build1_arm64.deb ...
+Unpacking libpcsclite1:arm64 (2.0.3-1build1) ...
+Selecting previously unselected package libcacard0:arm64.
+Preparing to unpack .../02-libcacard0_1%3a2.8.0-3build4_arm64.deb ...
+Unpacking libcacard0:arm64 (1:2.8.0-3build4) ...
+Selecting previously unselected package libdaxctl1:arm64.
+Preparing to unpack .../03-libdaxctl1_77-2ubuntu2_arm64.deb ...
+Unpacking libdaxctl1:arm64 (77-2ubuntu2) ...
+Selecting previously unselected package libndctl6:arm64.
+Preparing to unpack .../04-libndctl6_77-2ubuntu2_arm64.deb ...
+Unpacking libndctl6:arm64 (77-2ubuntu2) ...
+Selecting previously unselected package libpmem1:arm64.
+Preparing to unpack .../05-libpmem1_1.13.1-1.1ubuntu2_arm64.deb ...
+Unpacking libpmem1:arm64 (1.13.1-1.1ubuntu2) ...
+Selecting previously unselected package librdmacm1t64:arm64.
+Preparing to unpack .../06-librdmacm1t64_50.0-2ubuntu0.2_arm64.deb ...
+Unpacking librdmacm1t64:arm64 (50.0-2ubuntu0.2) ...
+Selecting previously unselected package liburing2:arm64.
+Preparing to unpack .../07-liburing2_2.5-1build1_arm64.deb ...
+Unpacking liburing2:arm64 (2.5-1build1) ...
+Selecting previously unselected package libusbredirparser1t64:arm64.
+Preparing to unpack .../08-libusbredirparser1t64_0.13.0-2.1build1_arm64.deb ...
+Unpacking libusbredirparser1t64:arm64 (0.13.0-2.1build1) ...
+Selecting previously unselected package qemu-system-common.
+Preparing to unpack .../09-qemu-system-common_1%3a8.2.2+ds-0ubuntu1.16_arm64.deb ...
+Unpacking qemu-system-common (1:8.2.2+ds-0ubuntu1.16) ...
+Selecting previously unselected package qemu-system-data.
+Preparing to unpack .../10-qemu-system-data_1%3a8.2.2+ds-0ubuntu1.16_all.deb ...
+Unpacking qemu-system-data (1:8.2.2+ds-0ubuntu1.16) ...
+Selecting previously unselected package qemu-system-arm.
+Preparing to unpack .../11-qemu-system-arm_1%3a8.2.2+ds-0ubuntu1.16_arm64.deb ...
+Unpacking qemu-system-arm (1:8.2.2+ds-0ubuntu1.16) ...
+Selecting previously unselected package qemu-utils.
+Preparing to unpack .../12-qemu-utils_1%3a8.2.2+ds-0ubuntu1.16_arm64.deb ...
+Unpacking qemu-utils (1:8.2.2+ds-0ubuntu1.16) ...
+Setting up libpcsclite1:arm64 (2.0.3-1build1) ...
+Setting up libdaxctl1:arm64 (77-2ubuntu2) ...
+Setting up qemu-system-data (1:8.2.2+ds-0ubuntu1.16) ...
+Setting up libusbredirparser1t64:arm64 (0.13.0-2.1build1) ...
+Setting up libndctl6:arm64 (77-2ubuntu2) ...
+Setting up librdmacm1t64:arm64 (50.0-2ubuntu0.2) ...
+Setting up libbrlapi0.8:arm64 (6.6-4ubuntu5) ...
+Setting up liburing2:arm64 (2.5-1build1) ...
+Setting up libpmem1:arm64 (1.13.1-1.1ubuntu2) ...
+Setting up libcacard0:arm64 (1:2.8.0-3build4) ...
+Setting up qemu-utils (1:8.2.2+ds-0ubuntu1.16) ...
+Setting up qemu-system-common (1:8.2.2+ds-0ubuntu1.16) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/qemu-kvm.service → /usr/lib/systemd/system/qemu-kvm.service.
+Setting up qemu-system-arm (1:8.2.2+ds-0ubuntu1.16) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Not building database; man-db/auto-update is not 'true'.
+Processing triggers for hicolor-icon-theme (0.17-2) ...
+++ ls work/image-zbitx-bookworm/zbitx-bookworm.img
+++ head -1
++ IMG=work/image-zbitx-bookworm/zbitx-bookworm.img
++ '[' -z work/image-zbitx-bookworm/zbitx-bookworm.img ']'
++ '[' '!' -f work/image-zbitx-bookworm/zbitx-bookworm.img ']'
++ echo 'Booting work/image-zbitx-bookworm/zbitx-bookworm.img in QEMU raspi3b...'
+Booting work/image-zbitx-bookworm/zbitx-bookworm.img in QEMU raspi3b...
++ ls -la work/image-zbitx-bookworm/zbitx-bookworm.img
+-rw-r--r-- 1 runner runner 1459617792 May 25 22:47 work/image-zbitx-bookworm/zbitx-bookworm.img
++ /sbin/fdisk -lu work/image-zbitx-bookworm/zbitx-bookworm.img
+Disk work/image-zbitx-bookworm/zbitx-bookworm.img: 1.36 GiB, 1459617792 bytes, 2850816 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x00000000
+
+Device                                        Boot  Start     End Sectors  Size Id Type
+work/image-zbitx-bookworm/zbitx-bookworm.img1 *     16384  114687   98304   48M  c W95 FAT32 (LBA)
+work/image-zbitx-bookworm/zbitx-bookworm.img2      114688 2850815 2736128  1.3G 83 Linux
++ echo '--- sfdisk -d ---'
+--- sfdisk -d ---
++ /sbin/sfdisk -d work/image-zbitx-bookworm/zbitx-bookworm.img
+label: dos
+label-id: 0x00000000
+device: work/image-zbitx-bookworm/zbitx-bookworm.img
+unit: sectors
+sector-size: 512
+
+work/image-zbitx-bookworm/zbitx-bookworm.img1 : start=       16384, size=       98304, type=c, bootable
+work/image-zbitx-bookworm/zbitx-bookworm.img2 : start=      114688, size=     2736128, type=83
+++ /sbin/sfdisk -d work/image-zbitx-bookworm/zbitx-bookworm.img
+++ awk '-F[ ,=]+' '/type=c[, ]/{for(i=1;i<=NF;i++) if($i=="start") {print $(i+1); exit}}'
++ BOOT_START=16384
++ '[' -z 16384 ']'
++ BOOT_OFFSET=8388608
++ echo 'Boot partition: start sector=16384, offset=8388608 bytes'
+Boot partition: start sector=16384, offset=8388608 bytes
++ echo '--- Boot partition contents ---'
+--- Boot partition contents ---
++ mdir -i work/image-zbitx-bookworm/zbitx-bookworm.img@@8388608
+ Volume in drive : is BOOT       
+ Volume Serial Number is C205-392C
+Directory for ::/
+
+LICENC~1 BRO      1594 2026-05-25  22:47  LICENCE.broadcom
+BCM271~1 DTB     32519 2026-05-25  22:47  bcm2710-rpi-2-b.dtb
+BCM271~2 DTB     35346 2026-05-25  22:47  bcm2710-rpi-3-b-plus.dtb
+BCM271~3 DTB     34711 2026-05-25  22:47  bcm2710-rpi-3-b.dtb
+BCM271~4 DTB     33700 2026-05-25  22:47  bcm2710-rpi-cm0.dtb
+BCM271~5 DTB     32282 2026-05-25  22:47  bcm2710-rpi-cm3.dtb
+BCM271~6 DTB     33688 2026-05-25  22:47  bcm2710-rpi-zero-2-w.dtb
+BCM271~7 DTB     33688 2026-05-25  22:47  bcm2710-rpi-zero-2.dtb
+BCM271~8 DTB     56369 2026-05-25  22:47  bcm2711-rpi-4-b.dtb
+BCM271~9 DTB     56373 2026-05-25  22:47  bcm2711-rpi-400.dtb
+BCM27~10 DTB     39913 2026-05-25  22:47  bcm2711-rpi-cm4-io.dtb
+BCM27~11 DTB     56890 2026-05-25  22:47  bcm2711-rpi-cm4.dtb
+BCM27~12 DTB     53880 2026-05-25  22:47  bcm2711-rpi-cm4s.dtb
+BCM27~13 DTB     78764 2026-05-25  22:47  bcm2712-d-rpi-5-b.dtb
+BCM27~14 DTB     78768 2026-05-25  22:47  bcm2712-rpi-5-b.dtb
+BCM27~15 DTB     78724 2026-05-25  22:47  bcm2712-rpi-500.dtb
+BCM27~16 DTB     79713 2026-05-25  22:47  bcm2712-rpi-cm5-cm4io.dtb
+BCM27~17 DTB     79779 2026-05-25  22:47  bcm2712-rpi-cm5-cm5io.dtb
+BCM27~18 DTB     79754 2026-05-25  22:47  bcm2712-rpi-cm5l-cm4io.dtb
+BCM27~19 DTB     79820 2026-05-25  22:47  bcm2712-rpi-cm5l-cm5io.dtb
+BCM27~20 DTB     78772 2026-05-25  22:47  bcm2712d0-rpi-5-b.dtb
+bootcode bin     52624 2026-05-25  22:47 
+cmdline  txt        91 2026-05-25  22:47 
+config   txt      1848 2026-05-25  22:47 
+fixup    dat      7370 2026-05-25  22:47 
+fixup4   dat      5499 2026-05-25  22:47 
+fixup4cd dat      3273 2026-05-25  22:47 
+fixup4db dat      8494 2026-05-25  22:47 
+fixup4x  dat      8494 2026-05-25  22:47 
+fixup_cd dat      3273 2026-05-25  22:47 
+fixup_db dat     10335 2026-05-25  22:47 
+fixup_x  dat     10337 2026-05-25  22:47 
+INITRA~1      12333116 2026-05-25  22:47  initramfs8
+kernel8  img   9993842 2026-05-25  22:47 
+overlays     <DIR>     2026-05-25  22:47 
+start    elf   3029888 2026-05-25  22:47 
+start4   elf   2305632 2026-05-25  22:47 
+start4cd elf    851740 2026-05-25  22:47 
+start4db elf   3804392 2026-05-25  22:47 
+start4x  elf   3053352 2026-05-25  22:47 
+start_cd elf    851740 2026-05-25  22:47 
+start_db elf   4876232 2026-05-25  22:47 
+start_x  elf   3777000 2026-05-25  22:47 
+       43 files          46 123 619 bytes
+                            466 944 bytes free
+
++ mkdir -p /tmp/qboot
++ cp --reflink=auto work/image-zbitx-bookworm/zbitx-bookworm.img /tmp/qboot/sd.img
++ qemu-img resize -f raw /tmp/qboot/sd.img 2G
+Image resized.
++ QEMU_IMG=/tmp/qboot/sd.img
++ ls -la /tmp/qboot/sd.img
+-rw-r--r-- 1 runner runner 2147483648 May 25 22:48 /tmp/qboot/sd.img
+++ mcopy -i /tmp/qboot/sd.img@@8388608 -n ::cmdline.txt -
++ ORIG_CMDLINE='console=serial0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait'
++ echo 'Original cmdline.txt: console=serial0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait'
+Original cmdline.txt: console=serial0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait
+++ echo 'console=serial0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait'
+++ sed -E 's/console=serial0,[0-9]+/console=ttyAMA0,115200/'
++ NEW_CMDLINE='console=ttyAMA0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait quiet=0'
++ echo 'Patched cmdline.txt: console=ttyAMA0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait quiet=0'
+Patched cmdline.txt: console=ttyAMA0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait quiet=0
++ printf '%s\n' 'console=ttyAMA0,115200 console=tty1 root=/dev/disk/by-slot/system fsck.repair=yes rootwait quiet=0'
++ mcopy -i /tmp/qboot/sd.img@@8388608 -o /tmp/qboot/cmdline.txt ::cmdline.txt
++ mcopy -i /tmp/qboot/sd.img@@8388608 ::config.txt /tmp/qboot/config.txt
++ grep -q '^enable_uart=1' /tmp/qboot/config.txt
++ :
++ set +x
+QEMU version:
+QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.16)
+Starting QEMU (firmware boot via SD card)...
+QEMU PID: 77015
++ kill -TERM 77015
++ for i in 1 2 3 4 5
++ kill -0 77015
++ sleep 1
++ for i in 1 2 3 4 5
++ kill -0 77015
++ break
++ kill -KILL 77015
++ true
++ wait 77015
++ '[' 0 -eq 1 ']'
++ echo 'FAIL: QEMU did not reach login within 7min'
+FAIL: QEMU did not reach login within 7min
++ echo '--- qemu-serial.log (last 80 lines, ANSI-stripped) ---'
+--- qemu-serial.log (last 80 lines, ANSI-stripped) ---
++ ansi_strip qemu-serial.log
++ sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' qemu-serial.log
++ tail -n 80
++ exit 1

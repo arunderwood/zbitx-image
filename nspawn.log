@@ -1,0 +1,193 @@
+systemd 252.39-1~deb12u2 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK -XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified)
+Detected virtualization systemd-nspawn.
+Detected architecture arm64.
+
+Welcome to [1mDebian GNU/Linux 12 (bookworm)[0m!
+
+Hostname set to <sbitx>.
+Initializing machine ID from container UUID.
+Queued start job for default target graphical.target.
+[[0;32m  OK  [0m] Created slice [0;1;39msystem-getty.slice[0m - Slice /system/getty.
+[[0;32m  OK  [0m] Created slice [0;1;39msystem-modpr…lice[0m - Slice /system/modprobe.
+[[0;32m  OK  [0m] Created slice [0;1;39muser.slice[0m - User and Session Slice.
+[[0;32m  OK  [0m] Started [0;1;39msystemd-ask-passwo…quests to Console Directory Watch.
+[[0;32m  OK  [0m] Started [0;1;39msystemd-ask-passwo… Requests to Wall Directory Watch.
+[[0;1;38;5;185mUNSUPP[0m] Starting of [0;1;39mdev-dri-card0.…[0m - /dev/dri/card0 unsupported.
+[[0;1;38;5;185mUNSUPP[0m] Starting of [0;1;39mdev-dri-render…- /dev/dri/renderD128 unsupported.
+[[0;32m  OK  [0m] Reached target [0;1;39mcryptsetup.…get[0m - Local Encrypted Volumes.
+[[0;32m  OK  [0m] Reached target [0;1;39mintegrityse…Local Integrity Protected Volumes.
+[[0;32m  OK  [0m] Reached target [0;1;39mnss-user-lo…[0m - User and Group Name Lookups.
+[[0;32m  OK  [0m] Reached target [0;1;39mpaths.target[0m - Path Units.
+[[0;32m  OK  [0m] Reached target [0;1;39mremote-fs.target[0m - Remote File Systems.
+[[0;32m  OK  [0m] Reached target [0;1;39mslices.target[0m - Slice Units.
+[[0;32m  OK  [0m] Reached target [0;1;39mswap.target[0m - Swaps.
+[[0;32m  OK  [0m] Reached target [0;1;39mveritysetup… - Local Verity Protected Volumes.
+[[0;32m  OK  [0m] Listening on [0;1;39msystemd-initc… initctl Compatibility Named Pipe.
+[[0;32m  OK  [0m] Listening on [0;1;39msystemd-journ…t[0m - Journal Socket (/dev/log).
+[[0;32m  OK  [0m] Listening on [0;1;39msystemd-journald.socket[0m - Journal Socket.
+         Mounting [0;1;39mdev-hugepages.mount[0m - Huge Pages File System...
+         Starting [0;1;39mfake-hwclock.serv…estore / save the current clock...
+         Starting [0;1;39mkeyboard-setup.se…Set the console keyboard layout...
+         Mounting [0;1;39msys-fs-fuse-conne…[0m - FUSE Control File System...
+         Starting [0;1;39msystemd-journald.service[0m - Journal Service...
+         Starting [0;1;39msystemd-network-g… units from Kernel command line...
+         Starting [0;1;39msystemd-remount-f…nt Root and Kernel File Systems...
+[0;1;39mdev-hugepages.mount: Mount process exited, code=exited, status=32/n/a[0m
+[0;1;38;5;185mdev-hugepages.mount: Failed with result 'exit-code'.[0m
+[[0;1;31mFAILED[0m] Failed to mount [0;1;39mdev-hugepa…ount[0m - Huge Pages File System.
+See 'systemctl status dev-hugepages.mount' for details.
+[[0;32m  OK  [0m] Finished [0;1;39mfake-hwclock.serv… Restore / save the current clock.
+[0;1;39msys-fs-fuse-connections.mount: Mount process exited, code=exited, status=32/n/a[0m
+[0;1;38;5;185msys-fs-fuse-connections.mount: Failed with result 'exit-code'.[0m
+[[0;1;31mFAILED[0m] Failed to mount [0;1;39msys-fs-fus…nt[0m - FUSE Control File System.
+See 'systemctl status sys-fs-fuse-connections.mount' for details.
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-network-g…rk units from Kernel command line.
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-remount-f…ount Root and Kernel File Systems.
+         Starting [0;1;39msystemd-sysusers.…rvice[0m - Create System Users...
+[[0;32m  OK  [0m] Started [0;1;39msystemd-journald.service[0m - Journal Service.
+         Starting [0;1;39msystemd-journal-f…h Journal to Persistent Storage...
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-sysusers.service[0m - Create System Users.
+         Starting [0;1;39msystemd-tmpfiles-…ate Static Device Nodes in /dev...
+[[0;32m  OK  [0m] Finished [0;1;39mkeyboard-setup.se…- Set the console keyboard layout.
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-tmpfiles-…reate Static Device Nodes in /dev.
+[[0;32m  OK  [0m] Reached target [0;1;39mlocal-fs-pr…reparation for Local File Systems.
+[[0;32m  OK  [0m] Reached target [0;1;39mlocal-fs.target[0m - Local File Systems.
+         Starting [0;1;39mconsole-setup.ser…m - Set console font and keymap...
+         Starting [0;1;39mnetfilter-persist…filter persistent configuration...
+         Starting [0;1;39msbitx-firstboot.s…zbitx one-shot first-boot setup...
+[[0;32m  OK  [0m] Finished [0;1;39mconsole-setup.ser…[0m - Set console font and keymap.
+[[0;32m  OK  [0m] Finished [0;1;39mnetfilter-persist…etfilter persistent configuration.
+[[0;32m  OK  [0m] Reached target [0;1;39mnetwork-pre…get[0m - Preparation for Network.
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-journal-f…ush Journal to Persistent Storage.
+[[0;32m  OK  [0m] Finished [0;1;39msbitx-firstboot.s…- zbitx one-shot first-boot setup.
+         Starting [0;1;39msystemd-tmpfiles-…te System Files and Directories...
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-tmpfiles-…eate System Files and Directories.
+         Starting [0;1;39msystemd-resolved.…e[0m - Network Name Resolution...
+[[0;32m  OK  [0m] Reached target [0;1;39mtime-set.target[0m - System Time Set.
+         Starting [0;1;39msystemd-update-ut…rd System Boot/Shutdown in UTMP...
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-update-ut…cord System Boot/Shutdown in UTMP.
+[[0;32m  OK  [0m] Started [0;1;39msystemd-resolved.s…ice[0m - Network Name Resolution.
+[[0;32m  OK  [0m] Reached target [0;1;39msysinit.target[0m - System Initialization.
+[[0;32m  OK  [0m] Started [0;1;39mapt-daily.timer[0m - Daily apt download activities.
+[[0;32m  OK  [0m] Started [0;1;39mapt-daily-upgrade.… apt upgrade and clean activities.
+[[0;32m  OK  [0m] Started [0;1;39mdpkg-db-backup.tim… Daily dpkg database backup timer.
+[[0;32m  OK  [0m] Started [0;1;39me2scrub_all.timer…etadata Check for All Filesystems.
+[[0;32m  OK  [0m] Started [0;1;39msystemd-tmpfiles-c… Cleanup of Temporary Directories.
+[[0;32m  OK  [0m] Reached target [0;1;39mtimers.target[0m - Timer Units.
+[[0;32m  OK  [0m] Listening on [0;1;39mdbus.socket[…- D-Bus System Message Bus Socket.
+[[0;32m  OK  [0m] Reached target [0;1;39msockets.target[0m - Socket Units.
+[[0;32m  OK  [0m] Reached target [0;1;39mbasic.target[0m - Basic System.
+         Starting [0;1;39maccounts-daemon.service[0m - Accounts Service...
+         Starting [0;1;39mdbus.service[0m - D-Bus System Message Bus...
+         Starting [0;1;39mdhcpcd.service[0…Client Daemon on all interfaces...
+         Starting [0;1;39mrpi-eeprom-update…for Raspberry Pi EEPROM updates...
+         Starting [0;1;39msshswitch.service…r /boot/firmware/ssh is present...
+         Starting [0;1;39msystemd-logind.se…ice[0m - User Login Management...
+[[0;32m  OK  [0m] Started [0;1;39mdbus.service[0m - D-Bus System Message Bus.
+[[0;1;31mFAILED[0m] Failed to start [0;1;39mrpi-eeprom…k for Raspberry Pi EEPROM updates.
+See 'systemctl status rpi-eeprom-update.service' for details.
+[[0;32m  OK  [0m] Finished [0;1;39msshswitch.service… or /boot/firmware/ssh is present.
+[[0;32m  OK  [0m] Started [0;1;39mdhcpcd.service[0m…P Client Daemon on all interfaces.
+[[0;32m  OK  [0m] Reached target [0;1;39mnetwork.target[0m - Network.
+         Starting [0;1;39mdnsmasq.service[…ght DHCP and caching DNS server...
+         Starting [0;1;39mhostapd.service[…n server for Wi-Fi and Ethernet...
+         Starting [0;1;39msystemd-user-sess…vice[0m - Permit User Sessions...
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-user-sess…ervice[0m - Permit User Sessions.
+[[0;32m  OK  [0m] Started [0;1;39mconsole-getty.service[0m - Console Getty.
+[[0;32m  OK  [0m] Reached target [0;1;39mgetty.target[0m - Login Prompts.
+         Starting [0;1;39mlightdm.service[0m - Light Display Manager...
+[[0;1;31mFAILED[0m] Failed to start [0;1;39mhostapd.se…ion server for Wi-Fi and Ethernet.
+See 'systemctl status hostapd.service' for details.
+[[0;1;31mFAILED[0m] Failed to start [0;1;39mdnsmasq.se…eight DHCP and caching DNS server.
+See 'systemctl status dnsmasq.service' for details.
+[[0;32m  OK  [0m] Reached target [0;1;39mnss-lookup.…m - Host and Network Name Lookups.
+[[0;32m  OK  [0m] Started [0;1;39msystemd-logind.service[0m - User Login Management.
+[[0;32m  OK  [0m] Reached target [0;1;39mmulti-user.target[0m - Multi-User System.
+         Starting [0;1;39mpolkit.service[0m - Authorization Manager...
+[[0;32m  OK  [0m] Started [0;1;39mpolkit.service[0m - Authorization Manager.
+[[0;32m  OK  [0m] Started [0;1;39maccounts-daemon.service[0m - Accounts Service.
+[[0;32m  OK  [0m] Started [0;1;39mlightdm.service[0m - Light Display Manager.
+[[0;32m  OK  [0m] Reached target [0;1;39mgraphical.target[0m - Graphical Interface.
+         Starting [0;1;39msystemd-update-ut… Record Runlevel Change in UTMP...
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-update-ut… - Record Runlevel Change in UTMP.
+[[0;32m  OK  [0m] Removed slice [0;1;39msystem-getty.slice[0m - Slice /system/getty.
+[[0;32m  OK  [0m] Removed slice [0;1;39msystem-modpr…lice[0m - Slice /system/modprobe.
+[[0;32m  OK  [0m] Stopped target [0;1;39mgraphical.target[0m - Graphical Interface.
+[[0;32m  OK  [0m] Stopped target [0;1;39mmulti-user.target[0m - Multi-User System.
+[[0;32m  OK  [0m] Stopped target [0;1;39mgetty.target[0m - Login Prompts.
+[[0;32m  OK  [0m] Stopped target [0;1;39mnss-lookup.…m - Host and Network Name Lookups.
+[[0;32m  OK  [0m] Stopped target [0;1;39mtimers.target[0m - Timer Units.
+[[0;32m  OK  [0m] Stopped [0;1;39mapt-daily-upgrade.… apt upgrade and clean activities.
+[[0;32m  OK  [0m] Stopped [0;1;39mapt-daily.timer[0m - Daily apt download activities.
+[[0;32m  OK  [0m] Stopped [0;1;39mdpkg-db-backup.tim… Daily dpkg database backup timer.
+[[0;32m  OK  [0m] Stopped [0;1;39me2scrub_all.timer…etadata Check for All Filesystems.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-tmpfiles-c… Cleanup of Temporary Directories.
+[[0;32m  OK  [0m] Stopped target [0;1;39mtime-set.target[0m - System Time Set.
+         Stopping [0;1;39maccounts-daemon.service[0m - Accounts Service...
+         Stopping [0;1;39mconsole-getty.service[0m - Console Getty...
+         Stopping [0;1;39mdbus.service[0m - D-Bus System Message Bus...
+[[0;32m  OK  [0m] Stopped [0;1;39mhostapd.service[0…ion server for Wi-Fi and Ethernet.
+         Stopping [0;1;39mlightdm.service[0m - Light Display Manager...
+         Stopping [0;1;39mpolkit.service[0m - Authorization Manager...
+         Stopping [0;1;39msystemd-logind.se…ice[0m - User Login Management...
+[[0;32m  OK  [0m] Stopped [0;1;39maccounts-daemon.service[0m - Accounts Service.
+[[0;32m  OK  [0m] Stopped [0;1;39mconsole-getty.service[0m - Console Getty.
+[[0;32m  OK  [0m] Stopped [0;1;39mdbus.service[0m - D-Bus System Message Bus.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-logind.service[0m - User Login Management.
+[[0;32m  OK  [0m] Stopped [0;1;39mlightdm.service[0m - Light Display Manager.
+         Stopping [0;1;39msystemd-user-sess…vice[0m - Permit User Sessions...
+[[0;32m  OK  [0m] Stopped [0;1;39mpolkit.service[0m - Authorization Manager.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-user-sessi…ervice[0m - Permit User Sessions.
+[[0;32m  OK  [0m] Stopped target [0;1;39mnetwork.target[0m - Network.
+[[0;32m  OK  [0m] Stopped target [0;1;39mnetwork-pre…get[0m - Preparation for Network.
+[[0;32m  OK  [0m] Stopped target [0;1;39mnss-user-lo…[0m - User and Group Name Lookups.
+[[0;32m  OK  [0m] Stopped target [0;1;39mremote-fs.target[0m - Remote File Systems.
+         Stopping [0;1;39mdhcpcd.service[0…Client Daemon on all interfaces...
+         Stopping [0;1;39mnetfilter-persist…filter persistent configuration...
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-network-ge…rk units from Kernel command line.
+[[0;32m  OK  [0m] Stopped [0;1;39mnetfilter-persiste…etfilter persistent configuration.
+[[0;32m  OK  [0m] Stopped [0;1;39mdhcpcd.service[0m…P Client Daemon on all interfaces.
+[[0;32m  OK  [0m] Stopped target [0;1;39mbasic.target[0m - Basic System.
+[[0;32m  OK  [0m] Stopped target [0;1;39mpaths.target[0m - Path Units.
+[[0;32m  OK  [0m] Stopped target [0;1;39mslices.target[0m - Slice Units.
+[[0;32m  OK  [0m] Removed slice [0;1;39muser.slice[0m - User and Session Slice.
+[[0;32m  OK  [0m] Stopped target [0;1;39msockets.target[0m - Socket Units.
+[[0;32m  OK  [0m] Closed [0;1;39mdbus.socket[0m - D-Bus System Message Bus Socket.
+[[0;32m  OK  [0m] Stopped target [0;1;39msysinit.target[0m - System Initialization.
+[[0;32m  OK  [0m] Stopped target [0;1;39mcryptsetup.…get[0m - Local Encrypted Volumes.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-ask-passwo…quests to Console Directory Watch.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-ask-passwo… Requests to Wall Directory Watch.
+[[0;32m  OK  [0m] Stopped target [0;1;39mintegrityse…Local Integrity Protected Volumes.
+[[0;32m  OK  [0m] Stopped target [0;1;39mveritysetup… - Local Verity Protected Volumes.
+         Stopping [0;1;39mfake-hwclock.serv…estore / save the current clock...
+         Stopping [0;1;39msystemd-resolved.…e[0m - Network Name Resolution...
+         Stopping [0;1;39msystemd-update-ut…rd System Boot/Shutdown in UTMP...
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-resolved.s…ice[0m - Network Name Resolution.
+[[0;32m  OK  [0m] Stopped [0;1;39mfake-hwclock.servi… Restore / save the current clock.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-update-utm…cord System Boot/Shutdown in UTMP.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-tmpfiles-s…eate System Files and Directories.
+[[0;32m  OK  [0m] Stopped target [0;1;39mlocal-fs.target[0m - Local File Systems.
+         Unmounting [0;1;39metc-localtime.mount[0m - /etc/localtime...
+         Unmounting [0;1;39mrun-credentials…ntials/systemd-sysusers.service...
+         Unmounting [0;1;39mrun-credentials…/systemd-tmpfiles-setup.service...
+         Unmounting [0;1;39mrun-credentials…temd-tmpfiles-setup-dev.service...
+         Unmounting [0;1;39mtmp.mount[0m - /tmp...
+[[0;1;31mFAILED[0m] Failed unmounting [0;1;39metc-localtime.mount[0m - /etc/localtime.
+[[0;1;31mFAILED[0m] Failed unmounting [0;1;39mrun-cred…dentials/systemd-sysusers.service.
+[[0;32m  OK  [0m] Unmounted [0;1;39mrun-credentials-…ls/systemd-tmpfiles-setup.service.
+[[0;1;31mFAILED[0m] Failed unmounting [0;1;39mrun-cred…ystemd-tmpfiles-setup-dev.service.
+[[0;1;31mFAILED[0m] Failed unmounting [0;1;39mtmp.mount[0m - /tmp.
+[[0;32m  OK  [0m] Stopped target [0;1;39mlocal-fs-pr…reparation for Local File Systems.
+[[0;32m  OK  [0m] Stopped target [0;1;39mswap.target[0m - Swaps.
+[[0;32m  OK  [0m] Reached target [0;1;39mumount.target[0m - Unmount All Filesystems.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-tmpfiles-s…reate Static Device Nodes in /dev.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-sysusers.service[0m - Create System Users.
+[[0;32m  OK  [0m] Stopped [0;1;39msystemd-remount-fs…ount Root and Kernel File Systems.
+[[0;32m  OK  [0m] Reached target [0;1;39mshutdown.target[0m - System Shutdown.
+[[0;32m  OK  [0m] Reached target [0;1;39mfinal.target[0m - Late Shutdown Services.
+[[0;32m  OK  [0m] Finished [0;1;39msystemd-poweroff.service[0m - System Power Off.
+[[0;32m  OK  [0m] Reached target [0;1;39mpoweroff.target[0m - System Power Off.
+Sending SIGTERM to remaining processes...
+Sending SIGKILL to remaining processes...
+All filesystems, swaps, loop devices, MD devices and DM devices detached.
+Powering off.

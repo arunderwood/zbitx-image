@@ -5,7 +5,7 @@
 set -eu
 
 failed=""
-for unit in sbitx-firstboot.service uap0.service hostapd.service dnsmasq.service netfilter-persistent.service; do
+for unit in uap0.service hostapd.service dnsmasq.service netfilter-persistent.service lightdm.service; do
     state=$(systemctl --root=/ is-enabled "$unit" 2>/dev/null || true)
     case "$state" in
         enabled|enabled-runtime|static|alias) ;;
@@ -18,12 +18,6 @@ done
 
 if [ -n "$failed" ]; then
     echo "FAIL: not enabled:$failed" >&2
-    exit 1
-fi
-
-# sbitx-firstboot.sh itself must be present + executable
-if [ ! -x /usr/local/sbin/sbitx-firstboot.sh ]; then
-    echo "FAIL: /usr/local/sbin/sbitx-firstboot.sh missing or not executable" >&2
     exit 1
 fi
 

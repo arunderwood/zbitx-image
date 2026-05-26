@@ -80,7 +80,8 @@ fails the build if any test exits non-zero. Tests cover:
 - SQLite logbook DB exists and has the expected schema.
 - `iptables-restore --test` accepts the rules file.
 - AudioInjector dtoverlay ships in Bookworm's raspi-firmware.
-- `sbitx-firstboot.service` is enabled.
+- Expected boot units (`uap0`, `hostapd`, `dnsmasq`,
+  `netfilter-persistent`, `lightdm`) are enabled.
 
 What's NOT tested at build time: anything requiring real GPIO/I2C
 hardware, the WM8731 codec, the actual radio path, or the kernel /
@@ -113,18 +114,23 @@ and uploads both the `.img.zst` and the SBOM as artifacts.
   the recipe was scaffolded. Bump explicitly when picking up new
   application changes; each bump is a commit you can review.
 
-## First-boot deferral
+## Build-time state hygiene
 
-A handful of steps can't happen in the build chroot and run instead
-via a one-shot systemd service (`sbitx-firstboot.service`) at first
-boot:
+A handful of files would be a security/correctness smell if shipped
+identical across every flashed image. Rather than carry a firstboot
+script to clean them up after the fact, the build's `cleanup-hooks`
+delete them so they're absent from the image and regenerated
+naturally on first boot:
 
-- Regenerate SSH host keys (chroot-baked keys are identical across
-  every flashed image — a security smell).
-- Delete build-time FFTW wisdom files so sbitx generates plans
-  optimized for the actual CPU on first launch.
-- Set a unique machine-id if missing.
+- **SSH host keys** (`/etc/ssh/ssh_host_*_key*`) — removed at
+  cleanup. sshd's first start on real hardware regenerates fresh
+  per-device keys.
+- **machine-id** (`/etc/machine-id`, `/var/lib/dbus/machine-id`) —
+  truncated/removed. `systemd-machine-id-setup` regenerates on first
+  boot.
+- **FFTW wisdom** (`/home/pi/sbitx/data/sbitx_wisdom*.wis`) — the
+  upstream tree commits these; `build-sbitx.sh` deletes them after
+  the source copy. FFTW generates fresh wisdom on first `sbitx` run.
 
-The service self-disables after success via
-`ConditionPathExists=!/var/lib/sbitx/firstboot-done`, mirroring the
-canonical Raspberry Pi pattern (`raspi-config`'s `do_resize`).
+Rootfs expansion on first boot is handled by stock Pi OS
+(`init_resize.sh`).

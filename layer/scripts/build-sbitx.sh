@@ -54,3 +54,10 @@ if ! head -c 4 ./sbitx | grep -q ELF; then
     echo "ERROR: ./sbitx does not start with ELF magic" >&2
     exit 1
 fi
+
+# ---- Drop the bundled FFTW wisdom files ----
+# The upstream repo commits data/sbitx_wisdom*.wis files that were tuned
+# on the original author's hardware. FFTW will re-evaluate plans against
+# the target CPU on first launch anyway; better to start clean than ship
+# stale wisdom that may be CPU-mismatched.
+rm -f data/sbitx_wisdom.wis data/sbitx_wisdom_f.wis

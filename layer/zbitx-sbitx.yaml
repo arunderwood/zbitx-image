@@ -133,7 +133,7 @@ mmdebstrap:
       install -m 0755 "${IGconf_sbitx_assetdir}/scripts/os-config.sh" "$1/tmp/os-config.sh"
       chroot "$1" /tmp/os-config.sh
       rm "$1/tmp/os-config.sh"
-      chroot "$1" systemctl enable hostapd dnsmasq sbitx-firstboot.service uap0.service
+      chroot "$1" systemctl enable hostapd dnsmasq uap0.service
       chroot "$1" systemctl disable NetworkManager 2>/dev/null || true
 
     # ---- In-chroot smoke tests (Phase 1 CI gate) ----
@@ -153,3 +153,16 @@ mmdebstrap:
       # Trim apt caches; rpi-image-gen normally handles this but be explicit.
       chroot "$1" apt-get clean
       rm -rf "$1/var/lib/apt/lists/"*
+
+      # Wipe baked-in SSH host keys. With the keys absent, sshd's first
+      # start on real hardware regenerates fresh per-device keys. Shipping
+      # identical baked keys across every flashed image is a security
+      # smell (passive MITM attacks against any zbitx).
+      rm -f "$1/etc/ssh/ssh_host_"*_key "$1/etc/ssh/ssh_host_"*_key.pub
+
+      # Empty /etc/machine-id. systemd-machine-id-setup regenerates it
+      # on first boot to a unique value. Shipping a fixed machine-id
+      # across every image breaks anything that uses it as an identifier
+      # (DHCP DUID, systemd journals, etc.).
+      : > "$1/etc/machine-id"
+      rm -f "$1/var/lib/dbus/machine-id"
