@@ -23,11 +23,24 @@ candidates to upstream once they're proven on real hardware.
 - **Where**: `layer/zbitx-sbitx.yaml` declares the URL and SHA256
   as variables; the first customize-hook downloads, verifies, and
   installs.
-- **Risk**: Unknown whether WiringPi 3.x's API matches 2.x for the
-  symbols zbitxv2 uses. Validate by reviewing
-  `grep -rn 'wiringPiSetup\|digitalRead\|digitalWrite\|pullUpDnControl\|wiringPiI2C' *.c`
-  in the zbitxv2 source against the 3.x API. If signatures diverge,
-  patch the source in `build-sbitx.sh`.
+- **API compatibility (verified 2026-05-26 against WiringPi 3.18
+  headers)**: All twelve wiringPi symbols sbitx calls
+  (`wiringPiSetup`, `wiringPiISR`, `pinMode`, `pullUpDnControl`,
+  `digitalRead`, `digitalWrite`, `delay`, `delayMicroseconds`,
+  `millis`, `wiringPiI2CSetup`, `wiringPiI2CReadReg8`,
+  `wiringPiI2CWriteReg8`) are present with unchanged signatures
+  and the same `INPUT/OUTPUT/HIGH/LOW/PUD_*/INT_EDGE_*` constants.
+  No source patches required. `wiringPiSetup()` (legacy wPi pin
+  numbering) remains the correct entry point on Pi Zero 2 W arm64.
+- **Behavioral nuance**: WiringPi 3.x routes `wiringPiISR` through
+  the gpio chardev (libgpiod-style) rather than the now-removed
+  sysfs `/sys/class/gpio` — transparent to callers. The one
+  behavior diff: 3.18 actually returns errors from `wiringPiISR()`
+  where 2.x silently swallowed them. sbitx ignores the return
+  value at `sbitx_gtk.c:3828-3831`; if encoder/PTT/dash ISRs
+  don't fire on first real-hardware boot, the return value is the
+  first thing to check (consider patching to log failures rather
+  than silently proceeding).
 
 ### 2. Drop `ntp` / `ntpstat`
 
