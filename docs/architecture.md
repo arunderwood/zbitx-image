@@ -45,20 +45,24 @@ The custom layer. Declares:
   with `systemd-timesyncd`, which is default-present on Bookworm).
 - A list of `customize-hooks` that:
   1. Install WiringPi 3.x from a downloaded `.deb`.
-  2. Build FFTW3 (double + single precision) from source.
-  3. Copy the zbitxv2 source from `vendor/sbitx/` to `/home/pi/sbitx/`
+  2. Copy the zbitxv2 source from `vendor/sbitx/` to `/home/pi/sbitx/`
      in the chroot, apply Bookworm patches, run `./build sbitx`,
      initialize the SQLite logbook, and seed `hw_settings.ini`.
-  4. Lay down OS-level config (config.txt overlays, systemd units,
+  3. Lay down OS-level config (config.txt overlays, systemd units,
      hostapd/dnsmasq configs, iptables rules, autostart desktop file).
-  5. Run the in-chroot smoke tests.
+  4. Run the in-chroot smoke tests.
+
+FFTW3 (double + single precision) comes from Debian Bookworm packages
+(`libfftw3-dev` + `libfftw3-single3`), which currently track upstream
+3.3.10. Earlier iterations built it from source per upstream's
+`install.txt` — that step is gone because the packaged version is
+identical.
 
 ### `layer/scripts/`
 
 Bash helpers invoked by the layer's hooks. Kept out of the YAML to
 keep the manifest readable:
 
-- `build-fftw.sh` — downloads, verifies, and builds FFTW.
 - `build-sbitx.sh` — applies in-source patches and runs the build.
 - `os-config.sh` — appends to `config.txt`, sets group memberships,
   defensively configures PulseAudio bypass.

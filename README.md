@@ -28,7 +28,8 @@ upstream-divergent patches and what could still break.
 - Apt packages from [install.txt](https://github.com/afarhan/zbitxv2/blob/main/install.txt)
   minus deprecated `ntp`/`ntpstat`.
 - WiringPi 3.x (Gordon's unofficial fork — drogon.net is offline).
-- FFTW3 built from source (double + single precision).
+- FFTW3 double + single precision from Bookworm packages
+  (`libfftw3-dev` + `libfftw3-single3`).
 - The zbitxv2 binary, built from a pinned submodule SHA.
 - WiFi AP setup (SSID `zbitx`, IP `192.168.4.1`) derived from
   [setup-ap.sh](https://github.com/afarhan/zbitxv2/blob/main/setup-ap.sh).
@@ -50,7 +51,6 @@ zbitxv2-image/
 ├── layer/
 │   ├── zbitx-sbitx.yaml            # the custom layer
 │   ├── scripts/                    # build-time scripts run inside the chroot
-│   │   ├── build-fftw.sh
 │   │   ├── build-sbitx.sh
 │   │   └── os-config.sh
 │   └── files/                      # rootfs file overlays (etc, boot, usr)

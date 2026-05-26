@@ -1,10 +1,10 @@
 #!/bin/sh
-# Assert FFTW3 (installed under /usr/local/lib by ./configure && make
-# install) is reachable via the runtime linker. Without an entry in
-# ld.so.cache or a matching ld.so.conf.d snippet, the sbitx binary
-# would compile + link fine at build time (RPATH or build-time
-# linker search) but fail to start at runtime with "cannot open
-# shared object file: No such file or directory".
+# Assert FFTW3 (libfftw3.so.3 + libfftw3f.so.3 from the libfftw3-double3
+# and libfftw3-single3 Debian packages) is reachable via the runtime
+# linker. Cheap sanity check — apt-installed packages should always be
+# in ld.so.cache, but a misnamed/missing package would silently produce
+# a binary that links at build time and fails to start at runtime with
+# "cannot open shared object file: No such file or directory".
 set -eu
 
 if ! ldconfig -p 2>/dev/null | grep -q '^[[:space:]]*libfftw3\.so\.3'; then

@@ -58,12 +58,4 @@ done
 # (laid down by the file overlay). Equivalent to
 # `raspi-config nonint do_boot_behaviour B4`.
 
-# ---- Ensure /usr/local/lib is in ld.so.cache (FFTW lives here) ----
-# rpi-image-gen's base ld.so.conf usually has /usr/local/lib already,
-# but be defensive.
-if [ -d /etc/ld.so.conf.d ] && ! grep -hq '^/usr/local/lib' /etc/ld.so.conf /etc/ld.so.conf.d/*.conf 2>/dev/null; then
-    echo /usr/local/lib > /etc/ld.so.conf.d/local-fftw.conf
-fi
-ldconfig
-
 echo "os-config.sh: complete"
