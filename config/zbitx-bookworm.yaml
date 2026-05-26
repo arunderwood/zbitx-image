@@ -2,7 +2,7 @@
 #
 # Target: Raspberry Pi Zero 2 W (arm64) running Debian Bookworm.
 # Build:  rpi-image-gen build -S ./ -c zbitx-bookworm.yaml
-# Output: ./work/zbitx-bookworm/zbitx-bookworm.img (+ SBOM)
+# Output: ./work/deploy-<version>/zbitx-bookworm.img.zst (+ SBOM)
 #
 # Architecture: arm64. Upstream zbitxv2 historically shipped armhf
 # builds on Buster, so first-boot validation on real hardware is

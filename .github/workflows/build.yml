@@ -213,14 +213,16 @@ jobs:
 
       - name: Upload image artifact
         # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
-        # The .img.zst is what users flash.
+        # We ship only the .img.zst — that's what Raspberry Pi Imager flashes
+        # (Imager 1.8.0+ handles zstd natively, no manual decompress needed).
+        # Deliberately NOT uploaded:
+        #  - work/image-*/<name>.img          (raw image; redundant with .zst)
+        #  - work/deploy-*/<name>-*.tar.zst   (IDP archive for rpi-sb-provisioner,
+        #                                      not for end-user flashing)
         uses: actions/upload-artifact@v4
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
-          path: |
-            work/deploy-*/zbitx-bookworm.img.zst
-            work/deploy-*/*.tar.zst
-            work/image-*/zbitx-bookworm.img
+          path: work/deploy-*/zbitx-bookworm.img.zst
           if-no-files-found: warn
           retention-days: 14
 
