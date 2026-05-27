@@ -211,6 +211,15 @@ jobs:
           echo "systemd-nspawn boot test failed; see step summary + nspawn-log artifact."
           exit 1
 
+      - name: Stage flashable artifact
+        # upload-artifact@v4 preserves any directory segment up to the first
+        # wildcard, so uploading work/deploy-*/foo.img.zst directly would
+        # nest the .img.zst under deploy-<sha>/ inside the zip. Copy into a
+        # flat dir so end users get the .img.zst at the top of the artifact.
+        run: |
+          mkdir -p _artifact
+          cp work/deploy-*/zbitx-bookworm.img.zst _artifact/
+
       - name: Upload image artifact
         # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
         # We ship only the .img.zst — that's what Raspberry Pi Imager flashes
@@ -222,7 +231,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
-          path: work/deploy-*/zbitx-bookworm.img.zst
+          path: _artifact/zbitx-bookworm.img.zst
           if-no-files-found: warn
           retention-days: 14
 
