@@ -152,8 +152,55 @@ After boot:
 - The mongoose web UI is at `http://192.168.4.1/` (iptables redirects
   port 80 → 8080 internally).
 - SSH listens on port 22; first boot regenerated unique host keys.
-- For zBitx v1 hardware, edit `/home/pi/sbitx/data/hw_settings.ini`
-  and add `hw=4` if the runtime auto-detect picks the wrong path.
+
+### Hardware variant
+
+The image ships configured for **zBitx v1 hardware** (the project
+maintainer's hardware): `hw_settings.ini` has `hw=4`, `bfo_freq=40035000`,
+and the v1 per-band TX power scaling table.
+
+The runtime auto-detect at [sbitx.c:1411-1416](https://github.com/afarhan/zbitxv2/blob/main/sbitx.c#L1411)
+only chooses between older sBitx kit boards (DE vs V2-kit) by probing
+I2C address 0x8. It cannot select `SBITX_V4` — which is what both zBitx
+v1 and zBitx v2 hardware actually need. So the right config is selected
+at build time, not detected at runtime.
+
+**For zBitx v2 hardware**, swap to the v2 settings after first boot:
+
+```bash
+ssh pi@192.168.4.1    # or your home-WiFi DHCP address
+cp /home/pi/sbitx/data/hw_settings.zbitx_v2 /home/pi/sbitx/data/hw_settings.ini
+sudo systemctl reboot
+```
+
+Both variants use the same `hw=4` code path; the swap changes BFO
+calibration (40035000 → 40048000 Hz), adds `center_bin=600`, and
+replaces the per-band TX power scaling table with v2-tuned values.
+
+### For zBitx v1 users upgrading from the original sbitx software
+
+The SD card is only half the upgrade. The front-panel Pico's firmware
+also has to be reflashed — the new sbitx (`zbitxv2`) talks to the
+front panel over WiFi rather than I2C, and the old firmware doesn't
+know how. Without this step, the screen comes up white and touch /
+VFO knob don't respond. After first boot:
+
+1. Power off the radio. Connect a USB cable to the **CAT** port (not
+   the port marked USB).
+2. Hold the **tuning knob pushed down** while powering on. The screen
+   lights dim white — the front panel is in UF2 upload mode and
+   appears as a USB drive on your computer.
+3. Copy `zbitx_front_panel_v2.ino.uf2` to that drive. The image ships
+   the UF2 at `/home/pi/sbitx/zbitx_front_panel_v2.ino.uf2` — grab it
+   via `scp`, or download fresh from
+   [upstream](https://github.com/afarhan/zbitxv2/blob/main/zbitx_front_panel_v2.ino.uf2).
+   The front panel reboots and associates over WiFi.
+4. If touch is misaligned after the upgrade: power off, then power on
+   with the **stylus held on the screen**. Red arrows appear in the
+   four corners — tap each, then restart.
+
+Keep the radio on AC during the firmware flash; low battery has been
+reported to cause failed UF2 copies on the BITX20 list.
 
 ## Security model
 
