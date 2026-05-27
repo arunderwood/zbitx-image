@@ -37,11 +37,27 @@ if [ ! -f data/sbitx.db ]; then
     sqlite3 data/sbitx.db < data/create_db.sql
 fi
 
-# ---- Seed hw_settings.ini with the v2 default, no `hw=` line ----
-# Runtime auto-detect at sbitx.c:1411-1416 picks the right HW version.
-# Users can override with `hw=4` for legacy zbitx v1 hardware.
-cp data/default_hw_settings.ini data/hw_settings.ini
-sed -i '/^hw=/d' data/hw_settings.ini
+# ---- Seed hw_settings.ini for zBitx v1 hardware (project default) ----
+# The runtime auto-detect at sbitx.c:1411-1416 only chooses between
+# SBITX_DE (0) and SBITX_V2 (1) by probing I2C address 0x8. It cannot
+# pick SBITX_V4 (4), which is what BOTH zBitx v1 and v2 hardware
+# require — the SWR bridge at 0x8 is present on zBitx too, so probe
+# succeeds and the auto-detect falsely returns SBITX_V2. That code
+# path then mishandles the relay sequencing, LPF management, and
+# power-meter polling. So `hw=4` MUST be seeded explicitly here,
+# not left to auto-detect.
+#
+# v1 is the current default — the project maintainer's hardware. v2
+# users swap the active hw_settings.ini after first boot; see README
+# "Flashing" section for the one-line cp + reboot.
+#
+# We patch one upstream typo: hw_settings_zbitxv1.ini's 40m [tx_band]
+# is missing f_stop, so set_tx_power_levels() at sbitx.c:1067 will
+# never match 40m and TX power scaling falls through to default for
+# that band. Idempotent: skipped if upstream eventually fixes it.
+cp data/hw_settings_zbitxv1.ini data/hw_settings.ini
+grep -q '^f_stop=7300000' data/hw_settings.ini || \
+    sed -i '/^f_start=7000000$/a f_stop=7300000' data/hw_settings.ini
 
 # ---- Quick sanity: did the binary link? ----
 # Just check existence + first 4 magic bytes for ELF. `file(1)` is not in
