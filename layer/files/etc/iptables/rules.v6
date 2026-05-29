@@ -1,0 +1,11 @@
+# IPv6 firewall rules loaded by iptables-persistent (ip6tables-restore) at boot.
+# sbitx's port 80 → 8080 web redirect and the WiFi AP are IPv4-only, so there
+# are no IPv6 NAT rules. This file exists so the netfilter-persistent
+# 25-ip6tables plugin has a valid ruleset to load instead of failing at boot
+# ("cannot open /etc/iptables/rules.v6" → "IPv6 rules failed test load").
+# Default-accept; tighten here if IPv6 filtering is ever needed.
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+COMMIT

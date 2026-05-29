@@ -58,11 +58,13 @@ if [ -f /etc/pulse/client.conf ]; then
     fi
 fi
 
-# ---- iptables NAT redirect (port 80 → 8080) loaded by iptables-persistent ----
-# Rules file is dropped by the overlay; ensure permissions.
-if [ -f /etc/iptables/rules.v4 ]; then
-    chmod 0644 /etc/iptables/rules.v4
-fi
+# ---- iptables rules loaded by iptables-persistent ----
+# Rules files are dropped by the overlay; ensure permissions. Both v4 (the
+# port 80 → 8080 NAT redirect) and v6 (a bare default-accept ruleset) must be
+# present, or the netfilter-persistent ip6tables plugin fails at boot.
+for f in /etc/iptables/rules.v4 /etc/iptables/rules.v6; do
+    [ -f "$f" ] && chmod 0644 "$f"
+done
 
 # ---- First-boot rootfs-expansion helper: ensure it's executable ----
 # The overlay tar can lose the +x bit when this repo is checked out on a
