@@ -1,11 +1,11 @@
 #!/bin/sh
-# Sanity-check /etc/iptables/rules.v4 structurally. We can't actually
-# `iptables-restore --test` inside the mmdebstrap chroot because the
+# Sanity-check /etc/iptables/rules.v4 and rules.v6 structurally. We can't
+# actually `iptables-restore --test` inside the mmdebstrap chroot because the
 # kernel namespace lacks CAP_NET_ADMIN — even as root in the chroot,
 # iptables refuses with "Permission denied (you must be root)".
 #
-# This file is consumed by iptables-persistent at boot on real hardware.
-# Validate structure here; real-hw boot will exercise it for real.
+# These files are consumed by iptables-persistent at boot on real hardware.
+# Validate structure here; real-hw boot will exercise them for real.
 set -eu
 
 CONF=/etc/iptables/rules.v4
@@ -38,4 +38,23 @@ if ! grep -qE 'dport 80.*REDIRECT.*to-ports 8080' "$CONF"; then
     exit 1
 fi
 
-echo "OK: $CONF structurally valid (real iptables test deferred to first boot)"
+# ---- IPv6: rules.v6 must also be present and structurally valid. Without it
+# the netfilter-persistent 25-ip6tables plugin fails at boot ("cannot open
+# /etc/iptables/rules.v6" → "IPv6 rules failed test load. New rules NOT
+# loaded"). sbitx is IPv4-only, so a bare default-accept *filter table is all
+# that's required — but the file MUST exist and parse.
+CONF6=/etc/iptables/rules.v6
+if [ ! -r "$CONF6" ]; then
+    echo "FAIL: $CONF6 missing or unreadable" >&2
+    exit 1
+fi
+if ! grep -qE '^\*filter' "$CONF6"; then
+    echo "FAIL: missing *filter section in $CONF6" >&2
+    exit 1
+fi
+if ! grep -q '^COMMIT$' "$CONF6"; then
+    echo "FAIL: missing COMMIT in $CONF6" >&2
+    exit 1
+fi
+
+echo "OK: $CONF + $CONF6 structurally valid (real iptables test deferred to first boot)"
