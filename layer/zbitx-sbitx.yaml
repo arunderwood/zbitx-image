@@ -74,6 +74,21 @@ mmdebstrap:
     - dhcpcd5
     - iptables
     - iptables-persistent
+    # `iw` is used by uap0.service to create the AP interface
+    # (`iw dev wlan0 interface add uap0 type __ap`). It ships on stock
+    # Raspberry Pi OS but is NOT a hard dependency of hostapd, and with
+    # Recommends off in this mmdebstrap build nothing pulls it in — so
+    # without listing it explicitly uap0/hostapd/dnsmasq fail at boot.
+    - iw
+    # regulatory.db, so cfg80211 can apply the regdomain
+    # (cmdline has cfg80211.ieee80211_regdom=US). Also not pulled in
+    # transitively in a Recommends-off build.
+    - wireless-regdb
+
+    # First-boot rootfs expansion. image-rpios builds a fixed-size image;
+    # `growpart` (from cloud-guest-utils) grows the root partition to fill
+    # the SD card, then zbitx-expand-rootfs.service runs resize2fs.
+    - cloud-guest-utils
 
     # Stock Raspberry Pi OS Desktop stack (this is the meta-package that
     # turns RPi OS Lite into the Desktop edition — lightdm, the labwc or
@@ -119,7 +134,7 @@ mmdebstrap:
       install -m 0755 "${IGconf_sbitx_assetdir}/scripts/os-config.sh" "$1/tmp/os-config.sh"
       chroot "$1" /tmp/os-config.sh
       rm "$1/tmp/os-config.sh"
-      chroot "$1" systemctl enable hostapd dnsmasq uap0.service
+      chroot "$1" systemctl enable hostapd dnsmasq uap0.service zbitx-expand-rootfs.service
       chroot "$1" systemctl disable NetworkManager 2>/dev/null || true
 
     # ---- In-chroot smoke tests (Phase 1 CI gate) ----

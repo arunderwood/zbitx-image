@@ -64,6 +64,13 @@ if [ -f /etc/iptables/rules.v4 ]; then
     chmod 0644 /etc/iptables/rules.v4
 fi
 
+# ---- First-boot rootfs-expansion helper: ensure it's executable ----
+# The overlay tar can lose the +x bit when this repo is checked out on a
+# non-Unix filesystem, which would make the systemd ExecStart fail.
+if [ -f /usr/local/sbin/zbitx-expand-rootfs ]; then
+    chmod 0755 /usr/local/sbin/zbitx-expand-rootfs
+fi
+
 # ---- Add `pi` user to the audio/i2c/gpio groups ----
 # rpi-user-credentials creates `pi`; we ensure group memberships.
 for g in audio i2c gpio video plugdev dialout input; do

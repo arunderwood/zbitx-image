@@ -1,0 +1,65 @@
+#!/bin/sh
+# First-boot: grow the root partition to fill the storage device and
+# resize the ext4 filesystem onto it, then self-disable via a marker.
+#
+# Why this exists: rpi-image-gen's image-rpios layout builds a
+# fixed-size image (the root partition is sized to fit the rootfs, with
+# no slack). Stock Raspberry Pi OS expands on first boot via
+# init_resize.sh triggered by an init= hook in cmdline.txt, but this
+# image has no such hook and uses a by-slot/label root, so nothing
+# expands the filesystem. Without this the card boots ~100% full and
+# the graphical session dies trying to write ~/.Xauthority (ENOSPC).
+set -eu
+
+MARKER=/var/lib/zbitx/rootfs-expanded
+
+# Never touch storage in a container (the CI systemd-nspawn boot test).
+if systemd-detect-virt --quiet --container; then
+    echo "zbitx-expand-rootfs: container detected, skipping."
+    exit 0
+fi
+
+rootdev="$(findmnt -no SOURCE / 2>/dev/null || true)"
+rootdev="$(readlink -f "$rootdev" 2>/dev/null || printf '%s' "$rootdev")"
+if [ -z "$rootdev" ] || [ ! -b "$rootdev" ]; then
+    echo "zbitx-expand-rootfs: root '$rootdev' is not a block device, skipping." >&2
+    exit 0
+fi
+
+# Split the partition device into disk + partition number.
+# Handles mmcblkXpN / nvmeXnYpN (the 'p' separator) and sdXN.
+case "$rootdev" in
+    *[0-9]p[0-9]*)
+        disk="${rootdev%p[0-9]*}"
+        partnum="${rootdev##*p}"
+        ;;
+    *[0-9])
+        partnum="$(printf '%s' "$rootdev" | sed 's:.*[^0-9]::')"
+        disk="${rootdev%"$partnum"}"
+        ;;
+    *)
+        echo "zbitx-expand-rootfs: cannot parse '$rootdev', skipping." >&2
+        exit 0
+        ;;
+esac
+
+if [ ! -b "$disk" ]; then
+    echo "zbitx-expand-rootfs: disk '$disk' is not a block device, skipping." >&2
+    exit 0
+fi
+
+echo "zbitx-expand-rootfs: growing $disk partition $partnum, then $rootdev"
+
+rc=0
+growpart "$disk" "$partnum" || rc=$?
+# growpart exit codes: 0 = resized, 2 = NOCHANGE (already full); else error.
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
+    echo "zbitx-expand-rootfs: growpart failed (rc=$rc)" >&2
+    exit 1
+fi
+
+resize2fs "$rootdev"
+
+mkdir -p "$(dirname "$MARKER")"
+date -u +"%Y-%m-%dT%H:%M:%SZ expanded ${rootdev}" > "$MARKER"
+echo "zbitx-expand-rootfs: done."

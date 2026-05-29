@@ -122,6 +122,57 @@ candidates to upstream once they're proven on real hardware.
   than the one the maintainer happened to build on. Candidate to
   upstream once the recipe is proven on real hardware.
 
+### 7. First-boot rootfs expansion
+
+- **What**: Ship `zbitx-expand-rootfs.service` + `/usr/local/sbin/zbitx-expand-rootfs`,
+  enabled at boot, which `growpart` the root partition to fill the SD
+  card and `resize2fs` the filesystem, then self-disable via
+  `/var/lib/zbitx/rootfs-expanded`. Adds `cloud-guest-utils` (for
+  `growpart`) to the package list.
+- **Why**: `image-rpios` builds a fixed-size image (root partition sized
+  to the rootfs, no slack). Unlike stock Raspberry Pi OS there is no
+  `init=`/`init_resize.sh` hook, and the by-slot/label root layout
+  wouldn't work with it anyway. **Discovered on the first real-hardware
+  boot (2026-05-28): the card booted ~100% full, every write hit ENOSPC,
+  and the graphical session never came up — lightdm's autologin session
+  and greeter both exited immediately failing to write `~/.Xauthority`
+  ("No space left on device"), leaving a black screen with a blinking
+  cursor.**
+- **Where**: `layer/files/etc/systemd/system/zbitx-expand-rootfs.service`,
+  `layer/files/usr/local/sbin/zbitx-expand-rootfs`,
+  `layer/scripts/os-config.sh` (chmod), `layer/zbitx-sbitx.yaml`
+  (package + `systemctl enable`).
+- **Risk**: Low. Online growpart+resize2fs of the last MBR partition is
+  the standard cloud-image pattern; the service skips containers so CI's
+  nspawn boot test is unaffected, and runs before `lightdm` so space is
+  available before the GUI starts.
+- **Why not rpi-image-gen's `expand-to-fit`?** rpi-image-gen does have an
+  `expand-to-fit: true` partition flag, and `simple_dual` even sets it on
+  the root partition — but it's a **provisioning-map** property honored
+  only by the `rpi-sb-provisioner` / IDP fastboot flow (`bin/idp.sh`
+  writes the image to a device and expands then). It does nothing for the
+  plain `.img.zst`: `genimage` bakes root at content size, `post-image.sh`
+  only embeds the pmap as IDP metadata, and CI ships only the `.img.zst`
+  (the IDP archive is deliberately not published). Since users flash the
+  `.img` with Raspberry Pi Imager, `expand-to-fit` never fires — hence the
+  first-boot service. Switching to the provisioner flow would honor it
+  natively but isn't an end-user "flash with Imager" path.
+
+### 8. Install `iw` and `wireless-regdb` explicitly
+
+- **What**: Add `iw` and `wireless-regdb` to the apt package list.
+- **Why**: Both ship on stock Raspberry Pi OS but neither is a hard
+  dependency of `hostapd`, and this mmdebstrap build installs with
+  Recommends off, so nothing pulled them in. **Discovered on the first
+  real-hardware boot (2026-05-28): `uap0.service` runs
+  `iw dev wlan0 interface add uap0` and failed with "Failed to locate
+  executable /sbin/iw", which cascaded into a `hostapd` crash-loop and
+  `dnsmasq` failure — the `zbitx` AP never came up. `cfg80211` also
+  logged "failed to load regulatory.db".**
+- **Where**: `layer/zbitx-sbitx.yaml` package list.
+- **Risk**: None. Restores tooling that the AP stack (`uap0.service`,
+  `hostapd.conf`) already assumed was present.
+
 ## Unknown unknowns
 
 There may be additional Bookworm regressions that only surface when

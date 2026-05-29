@@ -11,11 +11,15 @@ a flashable `.img.zst` plus an SBOM.
 
 ## Status
 
-**Phase 1 scaffolding — not yet validated end-to-end.** The recipe
-encodes what we believe is needed to build zbitxv2 on Bookworm but has
-not been booted on real zBitx hardware. See
-[docs/bookworm-patches.md](docs/bookworm-patches.md) for the list of
-upstream-divergent patches and what could still break.
+**Phase 1 — first real-hardware boot done (2026-05-28); re-validation
+in progress.** The first flash to real zBitx v1 hardware reached
+multi-user/SSH but the graphical session never started: the rootfs
+shipped 100% full (rpi-image-gen builds a fixed-size image and nothing
+expanded it on first boot), so lightdm died writing `~/.Xauthority`
+with ENOSPC — a black screen with a blinking cursor. The WiFi AP stack
+was also missing `iw`. Both are now fixed (see patches 7–8 in
+[docs/bookworm-patches.md](docs/bookworm-patches.md)); a re-flash to
+confirm the GUI + AP come up is pending.
 
 ## What it builds
 
@@ -39,8 +43,11 @@ upstream-divergent patches and what could still break.
 - AudioInjector WM8731 dtoverlay + GPIO/I2C/I2S enabled in
   `config.txt`.
 - SSH host keys + machine-id + bundled FFTW wisdom deleted at
-  build time so first boot regenerates them naturally (no custom
-  firstboot script needed).
+  build time so first boot regenerates them naturally via their own
+  services (no custom script needed for these).
+- First-boot rootfs expansion: `zbitx-expand-rootfs.service` grows the
+  root partition + ext4 filesystem to fill the SD card, since
+  rpi-image-gen's `image-rpios` builds a fixed-size image.
 
 ## Repo layout
 
@@ -227,7 +234,9 @@ Operationally, this means:
 
 ## Known limitations
 
-- **Not booted on real hardware yet** — see Status.
+- **Real-hardware validation in progress** — first boot (2026-05-28)
+  surfaced two first-boot defects (rootfs not expanded; `iw` missing),
+  now fixed; a re-flash to confirm the GUI + AP is pending. See Status.
 - **No QEMU boot test in CI.** QEMU's `raspi3b`/`raspi4b` machines
   don't emulate the Pi firmware path well enough to reliably boot a
   Pi OS image to a login prompt, and the WM8731 codec / GPIO / I2C
