@@ -170,5 +170,22 @@ naturally on first boot:
   upstream tree commits these; `build-sbitx.sh` deletes them after
   the source copy. FFTW generates fresh wisdom on first `sbitx` run.
 
-Rootfs expansion on first boot is handled by stock Pi OS
-(`init_resize.sh`).
+## First-boot rootfs expansion
+
+`image-rpios` (rpi-image-gen's `mbr/simple_dual` layout) builds a
+**fixed-size** image: the root partition is sized to the rootfs
+contents with no slack, so a freshly flashed card boots ~100% full.
+Stock Raspberry Pi OS expands on first boot via `init_resize.sh`, but
+that is triggered by an `init=` hook in `cmdline.txt` and is hardcoded
+to the stock `PARTUUID` mmcblk layout — this image has no such hook and
+roots off `/dev/disk/by-slot/system` (a label-keyed udev symlink), so
+`init_resize.sh` neither runs nor applies.
+
+Instead this recipe ships `zbitx-expand-rootfs.service` (oneshot,
+ordered before `lightdm`), which calls `/usr/local/sbin/zbitx-expand-rootfs`
+to `growpart` the root partition to fill the device and `resize2fs` the
+filesystem online, then writes `/var/lib/zbitx/rootfs-expanded` so it
+runs only once. It self-skips in containers (`ConditionVirtualization=!container`)
+so the CI nspawn boot test is unaffected. Growing the last partition is
+safe for the slot layout because the `by-slot` symlinks key on the
+filesystem **label** (`ID_FS_LABEL`), which a resize doesn't change.

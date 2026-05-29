@@ -5,7 +5,7 @@
 set -eu
 
 failed=""
-for unit in uap0.service hostapd.service dnsmasq.service netfilter-persistent.service lightdm.service; do
+for unit in uap0.service hostapd.service dnsmasq.service netfilter-persistent.service lightdm.service zbitx-expand-rootfs.service; do
     state=$(systemctl --root=/ is-enabled "$unit" 2>/dev/null || true)
     case "$state" in
         enabled|enabled-runtime|static|alias) ;;
