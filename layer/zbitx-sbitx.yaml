@@ -90,14 +90,57 @@ mmdebstrap:
     # the SD card, then zbitx-expand-rootfs.service runs resize2fs.
     - cloud-guest-utils
 
-    # Stock Raspberry Pi OS Desktop stack (this is the meta-package that
-    # turns RPi OS Lite into the Desktop edition — lightdm, the labwc or
-    # wayfire compositor, pcmanfm, lxterminal, Pixel theme, raspi-config
-    # via dependency chain). Picking this over a hand-rolled openbox
-    # kiosk means lightdm handles autologin natively, and users get the
-    # familiar Pi tooling (raspi-config, file manager, etc.).
+    # Raspberry Pi Pixel desktop. raspberrypi-ui-mods is the metapackage for
+    # the RPi desktop session — it pulls lightdm, the openbox + wayfire/labwc
+    # session, lxpanel, pcmanfm, and lxsession as hard Depends, so lightdm
+    # handles autologin natively (see the 50-zbitx-autologin.conf overlay).
     - raspberrypi-ui-mods
     - raspi-config
+
+    # Desktop add-ons that raspberrypi-ui-mods only *Recommends*, not Depends.
+    # With Recommends off (this build) none of them install, which leaves a
+    # hollow desktop: lxpanel comes up as a bare taskbar + clock with NO
+    # launcher menu, and openbox can't load its PiXflat theme. Confirmed on
+    # real hardware 2026-05-29 (boots to the Pixel session, but unusable).
+    # Listed explicitly here — same approach as iw/wireless-regdb above — so
+    # they install with Recommends off. Resolving raspberrypi-ui-mods's full
+    # Recommends instead would drag in ~650 packages an SDR appliance has no
+    # use for (CUPS/HPLIP printing, gstreamer codecs, SANE scanning,
+    # rp-bookshelf, samba, the parallel Wayland wfplug-* applet set, ...).
+    # This curated set adds 51 packages and resolves cleanly (0 upgrades).
+    #   - lxplug-menu ships the `smenu` plugin = the launcher menu the panel
+    #     profile asks for (its absence is the missing-menu symptom)
+    #   - the other lxplug-* are the panel's status applets; the panel profile
+    #     shipped by raspberrypi-ui-mods references all of them by name
+    #   - pixflat-theme/-icons + fonts-piboto = the Pixel look (GTK + openbox)
+    #   - pipanel = appearance settings; rc-gui = the raspi-config GUI;
+    #     pi-greeter = the themed lightdm greeter
+    - lxplug-menu
+    - lxplug-volumepulse
+    - lxplug-netman
+    - lxplug-bluetooth
+    - lxplug-ejecter
+    - lxplug-batt
+    - lxplug-updater
+    - lxplug-magnifier
+    - lxplug-cputemp
+    - lxplug-cpu
+    - pipanel
+    - rc-gui
+    - pi-greeter
+    - pixflat-theme
+    - pixflat-icons
+    - fonts-piboto
+
+    # Bluetooth. The Pi Zero 2 W has an onboard BT controller but the base
+    # image ships no stack, so the lxplug-bluetooth panel applet would load
+    # with nothing behind it. pi-bluetooth wires up the hciuart/btattach
+    # service and Depends on bluez (bluetoothd) + bluez-firmware — the latter
+    # carries BCM43430B0.raspberrypi,model-zero-2-w.hcd, the patch the Zero 2 W
+    # controller needs. bluez-firmware lives in Debian non-free-firmware, which
+    # this build already enables (it's where the firmware-brcm80211 WiFi blob
+    # comes from).
+    - pi-bluetooth
 
   customize-hooks:
     # ---- WiringPi 3.x install (Bookworm-port patch #1) ----
