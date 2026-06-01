@@ -56,13 +56,18 @@ inside the submodule rather than from the repo root.
 
 Two choices here are load-bearing:
 
-- **`FIRST_USER_NAME=pi` + `DISABLE_FIRST_BOOT_USER_RENAME=1`.** sbitx
+- **`FIRST_USER_NAME=pi`, locked, with the piwiz wizard removed.** sbitx
   hardcodes `/home/pi/sbitx` paths, so the user must stay `pi`. pi-gen
-  creates `pi` as a *locked* account (`adduser --disabled-password`);
-  desktop autologin (stage4's `do_boot_behaviour B4`) reaches the GUI
-  without a password, and operators set a password / WiFi / SSH key via
-  Raspberry Pi Imager. Disabling the rename also removes the piwiz
-  first-boot wizard.
+  creates `pi` as a *locked* account (`adduser --disabled-password`); we
+  deliberately ship no `FIRST_USER_PASS`, so we can't use
+  `DISABLE_FIRST_BOOT_USER_RENAME=1` (pi-gen aborts the build unless a
+  password is baked — `build.sh:287`). Instead `stage-zbitx` deletes
+  `/etc/xdg/autostart/piwiz.desktop` (what the `DISABLE=1` path does
+  internally), so no first-boot wizard can rename `pi`. Desktop autologin
+  (stage4's `do_boot_behaviour B4`) reaches the GUI without a password,
+  `pi` sudoes passwordless (pi-gen's `sudoers.d/010_pi-nopasswd`), and
+  operators set a password / WiFi / SSH key via Raspberry Pi Imager's
+  `firstrun.sh` (which provisions independently of the rename path).
 - **`DEPLOY_COMPRESSION=xz`.** The stock Raspberry Pi OS distribution
   format, ingested natively by Imager. (This pinned pi-gen has no zstd.)
 

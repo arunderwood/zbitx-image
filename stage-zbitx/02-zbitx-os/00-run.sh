@@ -12,6 +12,13 @@
 # ---- File overlays (hostapd/dnsmasq/uap0/iptables/snd-aloop/autostart/NM) ----
 cp -a files/rootfs/. "${ROOTFS_DIR}/"
 
+# ---- Keep the user `pi` (protect sbitx's hardcoded /home/pi) ----
+# We can't use DISABLE_FIRST_BOOT_USER_RENAME=1 (pi-gen requires a baked
+# FIRST_USER_PASS for it). Removing the piwiz wizard is exactly what that
+# path does internally: with no wizard, nothing on first boot renames `pi`.
+# Raspberry Pi Imager's firstrun.sh still provisions password/WiFi/SSH.
+rm -f "${ROOTFS_DIR}/etc/xdg/autostart/piwiz.desktop"
+
 # ---- config.txt: zbitx hardware overlays ----
 CONFIG_TXT="${ROOTFS_DIR}/boot/firmware/config.txt"
 [ -f "${CONFIG_TXT}" ] || CONFIG_TXT="${ROOTFS_DIR}/boot/config.txt"
