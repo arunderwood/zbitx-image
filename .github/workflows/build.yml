@@ -7,16 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  # Pinned rpi-image-gen version. Bump by editing this single value;
-  # tags and full SHAs both work. The tool is cloned into $RUNNER_TEMP
-  # rather than vendored in-tree so the recipe repo stays lean.
-  # renovate: datasource=github-tags depName=raspberrypi/rpi-image-gen
-  RPI_IMAGE_GEN_REF: v2.6.0
-
 jobs:
   build:
-    name: rpi-image-gen build (${{ matrix.release }}, ${{ matrix.arch }})
+    name: pi-gen build (${{ matrix.release }}, ${{ matrix.arch }})
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
@@ -26,30 +19,41 @@ jobs:
 
     steps:
       - name: Checkout (with submodules)
+        # vendor/pi-gen (the build tooling, pinned in .gitmodules to the
+        # bookworm-arm64 branch) and vendor/sbitx (the app source) both come in
+        # as submodules. fetch-depth: 0 so build.sh's `git describe` works.
         uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
 
       - name: Free up disk space
-        # rpi-image-gen scratch space is several GB; the default GHA arm runner has ~14 GB free.
+        # pi-gen keeps a full rootfs copy per stage (stage0..4 + stage-zbitx);
+        # a Desktop build is tens of GB. The default GHA arm runner has ~14 GB
+        # free, so reclaim what we can. If this proves too tight, move WORK_DIR
+        # onto a larger mounted volume or use a bigger runner.
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
           df -h /
 
-      - name: Clone rpi-image-gen
-        run: |
-          git clone --depth=1 --branch "$RPI_IMAGE_GEN_REF" \
-            https://github.com/raspberrypi/rpi-image-gen.git \
-            "$RUNNER_TEMP/rpi-image-gen"
-
-      - name: Install rpi-image-gen host dependencies
-        # Per rpi-image-gen docs: mmdebstrap, bdebstrap, genimage + assorted Debian tooling.
-        # The exact list lives in rpi-image-gen/install_deps.sh; calling it is the supported path.
+      - name: Install pi-gen host dependencies
+        # Matches pi-gen's `depends` manifest (its dependencies_check is
+        # unconditional — it wants qemu-user-static present even on a native
+        # arm64 runner, though binfmt itself is then unused). Plus bmap-tools
+        # for the optional .bmap.
         run: |
           sudo apt-get update
-          sudo bash "$RUNNER_TEMP/rpi-image-gen/install_deps.sh"
+          sudo apt-get install -y --no-install-recommends \
+            quilt parted coreutils qemu-user-static debootstrap zerofree zip \
+            dosfstools e2fsprogs libcap2-bin libarchive-tools grep rsync \
+            xz-utils curl xxd file git kmod bc gpg pigz arch-test bmap-tools
+
+      - name: Install syft (for SBOM)
+        # pi-gen's finalise stage generates an SPDX SBOM if `syft` is on PATH.
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sudo sh -s -- -b /usr/local/bin
 
       - name: Diag - host environment
         run: |
@@ -58,19 +62,16 @@ jobs:
           lsb_release -a || true
           id
           df -h .
-          pwd
-          ls -la
-          echo "--- rpi-image-gen version ---"
-          ( cd "$RUNNER_TEMP/rpi-image-gen" && git describe --tags --always )
-          echo "--- rpi-image-gen help ---"
-          "$RUNNER_TEMP/rpi-image-gen/rpi-image-gen" help || true
+          echo "--- pi-gen pin ---"
+          git -C vendor/pi-gen describe --tags --always
+          git -C vendor/pi-gen rev-parse HEAD
 
       - name: Build image
         id: build
         continue-on-error: true
         run: |
           set -x
-          "$RUNNER_TEMP/rpi-image-gen/rpi-image-gen" build -S "$PWD" -c zbitx-bookworm.yaml 2>&1 | tee build.log
+          ./scripts/pi-gen-build.sh 2>&1 | tee build.log
           exit "${PIPESTATUS[0]}"
 
       - name: Upload build log (always)
@@ -84,8 +85,7 @@ jobs:
 
       - name: Dump build log tail to step summary (always)
         # Step-summary content is rendered into the public run-page HTML,
-        # which is readable without any API auth — bypasses the 60/hr
-        # unauth rate limit on the actions API.
+        # readable without API auth — bypasses the 60/hr unauth API rate limit.
         if: always()
         run: |
           if [ ! -f build.log ]; then
@@ -108,35 +108,32 @@ jobs:
 
       - name: List build artifacts
         run: |
-          ls -lhR work/ 2>/dev/null | head -100 || true
-          echo "--- *.img* + *.sbom* files ---"
-          find work -name '*.img*' -o -name '*.sbom*' -o -name '*.spdx*' -o -name '*.cdx*' 2>/dev/null | xargs -r ls -lh
+          ls -lhR vendor/pi-gen/deploy/ 2>/dev/null | head -50 || true
+          echo "--- rootfs stages ---"
+          ls -d vendor/pi-gen/work/*/*/rootfs 2>/dev/null || true
 
       - name: Boot-test rootfs in systemd-nspawn
-        # Tier-1 boot validation: boot the produced rootfs as a container,
-        # confirm systemd reaches multi-user.target within 90s. Catches
-        # service-ordering bugs, D-Bus startup issues, lightdm crash-loops,
-        # broken user/shell setup, and similar dynamic failures that the
-        # chroot tests fundamentally can't see.
+        # Tier-1 boot validation: boot the final (stage-zbitx) rootfs as a
+        # container, confirm systemd reaches multi-user.target within 90s.
+        # Catches service-ordering bugs, D-Bus startup issues, broken user/shell
+        # setup, and similar dynamic failures the chroot tests can't see.
         #
-        # Limits: nspawn shares the host kernel, so kernel module loading
-        # (snd-aloop, dtoverlays) + hardware (I2C, GPIO, WM8731 audio) are
-        # not tested. Those still need real-hardware validation.
+        # Limits: nspawn shares the host kernel, so kernel modules (snd-aloop,
+        # dtoverlays) + hardware (I2C, GPIO, WM8731 audio, the wlan0/uap0 AP)
+        # are not exercised. uap0.service/hostapd/dnsmasq self-skip or fail
+        # harmlessly here (no wlan0); that does not block multi-user.target.
         id: nspawn
         continue-on-error: true
         run: |
           set -eux
           sudo apt-get install -y --no-install-recommends systemd-container
-          ROOTFS=$(ls -d work/chroot-*/filesystem 2>/dev/null | head -1)
+          ROOTFS=$(ls -d vendor/pi-gen/work/*/stage-zbitx/rootfs 2>/dev/null | head -1)
           if [ -z "$ROOTFS" ] || [ ! -d "$ROOTFS" ]; then
-            echo "FAIL: no work/chroot-*/filesystem rootfs found" >&2
+            echo "FAIL: no stage-zbitx rootfs found under vendor/pi-gen/work" >&2
             exit 1
           fi
           echo "Booting $ROOTFS via systemd-nspawn..."
 
-          # Boot in background, mirror PID 1's console to a log file we can grep.
-          # --kill-signal=SIGRTMIN+3 is systemd's "poweroff" signal.
-          # --resolv-conf=off avoids stomping the chroot's /etc/resolv.conf.
           sudo timeout --kill-after=10 120 systemd-nspawn \
             -D "$ROOTFS" \
             --boot \
@@ -147,12 +144,6 @@ jobs:
             2>&1 | tee nspawn.log &
           NSPAWN_BG=$!
 
-          # Poll for the multi-user marker, or fail after 90s.
-          # systemd colorizes its console output, so the line we want
-          # looks like:
-          #   [ OK ] Reached target \x1b[...mmulti-user.target\x1b[...m - Multi-User System.
-          # Strip ANSI escape codes before grepping so the literal
-          # "Reached target multi-user" matches.
           DEADLINE=$(( $(date +%s) + 90 ))
           REACHED=0
           ansi_strip() { sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$1"; }
@@ -164,9 +155,7 @@ jobs:
             sleep 2
           done
 
-          # Clean shutdown of the container.
           sudo machinectl poweroff zbitx-test 2>/dev/null || true
-          # Give it a few seconds to wind down before we force-kill.
           for i in 1 2 3 4 5; do
             kill -0 "$NSPAWN_BG" 2>/dev/null || break
             sleep 1
@@ -174,7 +163,6 @@ jobs:
           sudo pkill -SIGRTMIN+3 -f "systemd-nspawn.*zbitx-test" 2>/dev/null || true
           wait "$NSPAWN_BG" 2>/dev/null || true
 
-          # Diagnose + emit verdict.
           if [ "$REACHED" -eq 1 ]; then
             echo "OK: rootfs reached multi-user.target in systemd-nspawn"
           else
@@ -212,35 +200,30 @@ jobs:
           exit 1
 
       - name: Stage flashable artifact
-        # upload-artifact@v4 preserves any directory segment up to the first
-        # wildcard, so uploading work/deploy-*/foo.img.zst directly would
-        # nest the .img.zst under deploy-<sha>/ inside the zip. Copy into a
-        # flat dir so end users get the .img.zst at the top of the artifact.
+        # Flatten the deploy dir so the .img.xz sits at the top of the artifact.
         run: |
           mkdir -p _artifact
-          cp work/deploy-*/zbitx-bookworm.img.zst _artifact/
+          cp vendor/pi-gen/deploy/*-zbitx-bookworm.img.xz _artifact/
 
       - name: Upload image artifact
-        # rpi-image-gen writes the deploy bundle to work/deploy-<git-sha>/.
-        # We ship only the .img.zst — that's what Raspberry Pi Imager flashes
-        # (Imager 1.8.0+ handles zstd natively, no manual decompress needed).
-        # Deliberately NOT uploaded:
-        #  - work/image-*/<name>.img          (raw image; redundant with .zst)
-        #  - work/deploy-*/<name>-*.tar.zst   (IDP archive for rpi-sb-provisioner,
-        #                                      not for end-user flashing)
+        # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz. That's what
+        # Raspberry Pi Imager flashes (it handles .xz natively). The stock
+        # .info package manifest ships alongside as the SBOM-adjacent record.
         uses: actions/upload-artifact@v7
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
-          path: _artifact/zbitx-bookworm.img.zst
+          path: _artifact/*-zbitx-bookworm.img.xz
           if-no-files-found: warn
           retention-days: 14
 
       - name: Upload SBOM artifact
+        # pi-gen deploys the SPDX SBOM (xz-compressed) when syft is present.
+        # The .info package manifest stays under work/export-image/.
         uses: actions/upload-artifact@v7
         with:
           name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-sbom
           path: |
-            work/deploy-*/*.sbom*
-            work/chroot-*/*.sbom*
+            vendor/pi-gen/deploy/*.sbom*
+            vendor/pi-gen/work/*/export-image/*.info
           if-no-files-found: warn
           retention-days: 90

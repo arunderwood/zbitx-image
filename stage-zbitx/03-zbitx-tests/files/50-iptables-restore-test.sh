@@ -1,6 +1,6 @@
 #!/bin/sh
 # Sanity-check /etc/iptables/rules.v4 and rules.v6 structurally. We can't
-# actually `iptables-restore --test` inside the mmdebstrap chroot because the
+# actually `iptables-restore --test` inside the build chroot because the
 # kernel namespace lacks CAP_NET_ADMIN — even as root in the chroot,
 # iptables refuses with "Permission denied (you must be root)".
 #

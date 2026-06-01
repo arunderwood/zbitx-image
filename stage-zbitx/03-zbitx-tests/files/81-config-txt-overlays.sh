@@ -3,7 +3,7 @@
 # additions appended by os-config.sh. A silent failure here would
 # brick the audio stack (no WM8731), I2C synthesizer, and snd-aloop
 # WSJT-X bridge on real hardware — and the build itself wouldn't
-# notice because rpi-image-gen doesn't validate config.txt contents.
+# notice because the build does not validate config.txt contents.
 set -eu
 
 for path in /boot/firmware/config.txt /boot/config.txt; do

@@ -4,38 +4,29 @@
   labels: ["dependencies"],
   dependencyDashboard: true,
 
-  // Submodules aren't picked up by default. Only vendor/sbitx remains
-  // as a submodule (rpi-image-gen now lives as an env var in build.yml).
+  // Submodules aren't picked up by default. Both vendor/pi-gen (the build
+  // tooling, pinned to the bookworm-arm64 branch) and vendor/sbitx (the app
+  // source) are tracked here.
   "git-submodules": {
     enabled: true,
   },
 
-  // Two URL/env-var pinned deps Renovate can't infer without help:
-  //   1. WiringPi .deb in layer/zbitx-sbitx.yaml — version appears twice
-  //      in the URL (path segment + filename), so two matchStrings.
-  //   2. RPI_IMAGE_GEN_REF in build.yml — picked up via the standard
-  //      `# renovate: datasource=… depName=…` annotation directly above it.
+  // WiringPi .deb pin in pi-gen.config — the version appears twice in the
+  // URL (path segment + filename), so two matchStrings.
   //
-  // Renovate cannot recompute `X-Env-Var-wiringpi_sha256` — the build's
+  // Renovate cannot recompute `ZBITX_WIRINGPI_SHA256` — the build's
   // `sha256sum -c` will fail until a maintainer pushes the new digest
   // onto the bump PR.
   customManagers: [
     {
       customType: "regex",
-      managerFilePatterns: ["/^layer/zbitx-sbitx\\.yaml$/"],
+      managerFilePatterns: ["/^pi-gen\\.config$/"],
       matchStrings: [
-        "X-Env-Var-wiringpi_url:[^\\n]*?/download/(?<currentValue>[0-9.]+)/",
-        "X-Env-Var-wiringpi_url:[^\\n]*?wiringpi_(?<currentValue>[0-9.]+)_",
+        "ZBITX_WIRINGPI_URL=[^\\n]*?/download/(?<currentValue>[0-9.]+)/",
+        "ZBITX_WIRINGPI_URL=[^\\n]*?wiringpi_(?<currentValue>[0-9.]+)_",
       ],
       datasourceTemplate: "github-releases",
       depNameTemplate: "WiringPi/WiringPi",
-    },
-    {
-      customType: "regex",
-      managerFilePatterns: ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
-      matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\s+\\S+:\\s*(?<currentValue>\\S+)",
-      ],
     },
   ],
 
@@ -56,7 +47,7 @@
     {
       matchDepNames: ["WiringPi/WiringPi"],
       prBodyNotes: [
-        "⚠️ Renovate cannot recompute `sha256` for URL-pinned artifacts. After this PR opens, fetch the new `.deb`, compute its sha256, and update the `X-Env-Var-wiringpi_sha256` line on this branch — otherwise the build fails at `sha256sum -c`.",
+        "⚠️ Renovate cannot recompute `sha256` for URL-pinned artifacts. After this PR opens, fetch the new `.deb`, compute its sha256, and update the `ZBITX_WIRINGPI_SHA256` line in `pi-gen.config` on this branch — otherwise the build fails at `sha256sum -c`.",
       ],
     },
   ],
