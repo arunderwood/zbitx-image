@@ -132,6 +132,16 @@ jobs:
             echo "FAIL: no stage-zbitx rootfs found under vendor/pi-gen/work" >&2
             exit 1
           fi
+
+          # pi-gen's /etc/fstab declares PARTUUID block mounts (/boot/firmware
+          # vfat, / ext4) that cannot mount inside a container — boot-firmware.mount
+          # fails, local-fs.target fails, and systemd drops to emergency mode
+          # (root is locked, so it just hangs). Those mounts are hardware-only;
+          # the deliverable image is already packaged, and this leftover rootfs is
+          # throwaway, so neutralise fstab for the boot test (keep proc).
+          sudo cp -a "$ROOTFS/etc/fstab" "$ROOTFS/etc/fstab.nspawn-bak" 2>/dev/null || true
+          printf 'proc /proc proc defaults 0 0\n' | sudo tee "$ROOTFS/etc/fstab" >/dev/null
+
           echo "Booting $ROOTFS via systemd-nspawn..."
 
           sudo timeout --kill-after=10 120 systemd-nspawn \
