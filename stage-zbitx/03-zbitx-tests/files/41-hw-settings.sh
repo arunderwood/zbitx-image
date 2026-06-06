@@ -42,7 +42,7 @@ if ! awk '
     END { exit !ok }
 ' "$INI"; then
     echo "FAIL: $INI 40m [tx_band] missing f_stop=7300000 after f_start=7000000" >&2
-    echo "(typo patch in layer/scripts/build-sbitx.sh did not apply)" >&2
+    echo "(typo patch in stage-zbitx/01-zbitx-app/files/build-sbitx.sh did not apply)" >&2
     exit 1
 fi
 

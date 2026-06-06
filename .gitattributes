@@ -12,5 +12,4 @@
 *.service   text eol=lf
 *.desktop   text eol=lf
 rules.v4    text eol=lf
-hostname    text eol=lf
-hosts       text eol=lf
+rules.v6    text eol=lf

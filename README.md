@@ -5,27 +5,31 @@ Reproducible, auditable Raspberry Pi SD-card image build for the
 transceiver software, targeting the zBitx v2 hardware (Raspberry Pi
 Zero 2 W + sBitx radio board).
 
-The recipe uses [rpi-image-gen](https://github.com/raspberrypi/rpi-image-gen)
-to layer the zbitxv2 build on top of a Debian Bookworm base, producing
-a flashable `.img.zst` plus an SBOM.
+The recipe uses [pi-gen](https://github.com/RPi-Distro/pi-gen) — the
+official Raspberry Pi OS build system — to add a single `stage-zbitx`
+on top of the stock Raspberry Pi OS Desktop (Bookworm, arm64) stages,
+producing a flashable `.img.xz` plus an SBOM.
 
 ## Status
 
-**Phase 1 — first real-hardware boot done (2026-05-28); re-validation
-in progress.** The first flash to real zBitx v1 hardware reached
-multi-user/SSH but the graphical session never started: the rootfs
-shipped 100% full (rpi-image-gen builds a fixed-size image and nothing
-expanded it on first boot), so lightdm died writing `~/.Xauthority`
-with ENOSPC — a black screen with a blinking cursor. The WiFi AP stack
-was also missing `iw`. Both are now fixed (see patches 7–8 in
-[docs/bookworm-patches.md](docs/bookworm-patches.md)); a re-flash to
-confirm the GUI + AP come up is pending.
+**Migrated to pi-gen (2026-05).** The build previously assembled a
+Debian Bookworm base with `rpi-image-gen` and hand-re-derived the
+Raspberry Pi OS niceties (WiFi packages, first-boot rootfs expansion,
+the Pixel desktop add-ons, RPi Imager user/WiFi provisioning). That
+approach meant continually "reinventing Raspbian." The recipe now
+starts from the *actual* Raspberry Pi OS via pi-gen and contributes
+only the zbitx delta (`stage-zbitx`); everything generic-Raspbian is
+inherited from upstream stages. The legacy rpi-image-gen recipe has been
+removed. Real-hardware re-validation on this new base is pending — see
+Known limitations.
 
 ## What it builds
 
-- Base: Debian Bookworm + Raspberry Pi apt repo + `raspberrypi-ui-mods`
-  (the meta-package that turns RPi OS Lite into RPi OS Desktop).
-  Arm64.
+- Base: stock **Raspberry Pi OS Desktop** (Bookworm, arm64), built by
+  pi-gen stages 0–4 — the same pipeline that produces official images.
+  WiFi, firmware, `raspi-config`, the full Pixel desktop, RPi Imager
+  firstrun/userconf provisioning, and first-boot rootfs expansion all
+  come from these stages, not from this repo.
 - Target hardware: Raspberry Pi Zero 2 W (zBitx v2). The same image
   is expected to work on zBitx v1 hardware via the runtime hardware
   auto-detect at [sbitx.c:1411-1416](https://github.com/afarhan/zbitxv2/blob/main/sbitx.c#L1411).
@@ -35,93 +39,86 @@ confirm the GUI + AP come up is pending.
 - FFTW3 double + single precision from Bookworm packages
   (`libfftw3-dev` + `libfftw3-single3`).
 - The zbitxv2 binary, built from a pinned submodule SHA.
-- WiFi AP setup (SSID `zbitx`, IP `192.168.4.1`) derived from
-  [setup-ap.sh](https://github.com/afarhan/zbitxv2/blob/main/setup-ap.sh).
+- WiFi: a **hybrid** model. NetworkManager (stock) keeps `wlan0` as the
+  client, so RPi Imager WiFi provisioning works out of the box; the
+  `zbitx` AP (SSID `zbitx`, IP `192.168.4.1`) runs as hostapd + dnsmasq
+  on a virtual `uap0` interface that NetworkManager is told to ignore.
+  Derived from [setup-ap.sh](https://github.com/afarhan/zbitxv2/blob/main/setup-ap.sh).
+  (Concurrent AP+client on the Pi's single radio is an unsupported,
+  same-channel mode — see [docs/architecture.md](docs/architecture.md).)
 - iptables NAT redirect port 80 → 8080 for the embedded mongoose
   web UI.
 - `snd-aloop` virtual ALSA cards for WSJT-X integration.
 - AudioInjector WM8731 dtoverlay + GPIO/I2C/I2S enabled in
-  `config.txt`.
-- SSH host keys + machine-id + bundled FFTW wisdom deleted at
-  build time so first boot regenerates them naturally via their own
-  services (no custom script needed for these).
-- First-boot rootfs expansion: `zbitx-expand-rootfs.service` grows the
-  root partition + ext4 filesystem to fill the SD card, since
-  rpi-image-gen's `image-rpios` builds a fixed-size image.
+  `config.txt`; the desktop audio stack (pipewire/pulseaudio) masked so
+  it can't grab the codec.
+- WiringPi 3.x and the zbitxv2 binary, built into `/home/pi/sbitx`.
 
 ## Repo layout
 
 ```
 zbitxv2-image/
-├── config/
-│   └── zbitx-bookworm.yaml         # top-level rpi-image-gen config
-├── layer/
-│   ├── zbitx-sbitx.yaml            # the custom layer
-│   ├── scripts/                    # build-time scripts run inside the chroot
-│   │   ├── build-sbitx.sh
-│   │   └── os-config.sh
-│   └── files/                      # rootfs file overlays (etc, boot, usr)
-├── tests/chroot/                   # in-chroot smoke tests (build-time gate)
+├── pi-gen.config                   # top-level pi-gen config (image identity, user, locale)
+├── stage-zbitx/                    # the one stage we own (the zbitx delta)
+│   ├── prerun.sh                   #   copy the Desktop rootfs forward
+│   ├── EXPORT_IMAGE                #   this stage exports the final image
+│   ├── 00-install-packages/        #   apt packages (build toolchain, AP stack)
+│   ├── 01-zbitx-app/               #   WiringPi + sBitx source build
+│   ├── 02-zbitx-os/                #   overlays, config.txt, audio masking, AP, X11
+│   └── 03-zbitx-tests/             #   in-chroot smoke tests (build-time gate)
+├── scripts/pi-gen-build.sh         # build wrapper (injects stage + suppresses extra images)
 ├── docs/
 │   ├── architecture.md             # recipe layout + validation tiers
 │   └── bookworm-patches.md         # divergences from upstream zbitxv2
+├── vendor/pi-gen/                  # submodule, pinned (bookworm-arm64 branch)
 ├── vendor/sbitx/                   # submodule, pinned zbitxv2 SHA
 └── .github/workflows/build.yml     # CI on ubuntu-24.04-arm + nspawn boot test
 ```
 
-rpi-image-gen itself is not vendored. CI clones it at a pinned tag
-(`RPI_IMAGE_GEN_REF` in [.github/workflows/build.yml](.github/workflows/build.yml));
-local builders clone it once and point it at this repo with `-S` (see
-"Building locally" below).
+pi-gen is a pinned **submodule** (`vendor/pi-gen`). `stage-zbitx` and
+`pi-gen.config` live outside it; the build wrapper injects them so the
+submodule tree stays pristine. Bump the pin with an explicit
+`git -C vendor/pi-gen pull` + commit (Renovate tracks it).
 
 ## Building
 
 ### Prerequisites
 
-rpi-image-gen requires a native arm64 Linux host running Debian Bookworm
-or Trixie. Practical options:
-
-- A Raspberry Pi 4 or 5 running Bookworm 64-bit (officially supported).
-- A free Oracle Ampere or other arm64 cloud VM with Bookworm.
-- GitHub Actions `ubuntu-24.04-arm` runner (what this repo's CI uses).
-- WSL2 with Bookworm — possible but not formally supported by upstream;
-  expect rough edges.
+pi-gen builds an arm64 image. On a **native arm64** Linux host (a Pi, an
+arm64 cloud VM, or the CI `ubuntu-24.04-arm` runner) no emulation is
+needed. On an **x86_64** host (e.g. WSL2) install `qemu-user-static` +
+`binfmt-support` first so the arm64 chroot can run. The build runs as
+root and needs tens of GB of scratch space (pi-gen keeps a full rootfs
+copy per stage).
 
 ### Building locally
 
 ```bash
-# 1. Clone this recipe (with the zbitxv2 submodule).
+# 1. Clone this recipe with submodules (pi-gen tooling + zbitxv2 source).
 git clone --recurse-submodules <this-repo>
 cd zbitxv2-image
 
-# 2. Clone rpi-image-gen at the same pinned tag CI uses.
-#    Reuse the same clone across multiple recipe repos if you like.
-git clone --depth=1 --branch v2.6.0 \
-    https://github.com/raspberrypi/rpi-image-gen.git ../rpi-image-gen
-
-# 3. One-time: install rpi-image-gen's host deps.
-sudo bash ../rpi-image-gen/install_deps.sh
-
-# 4. Build. `-S "$PWD"` tells rpi-image-gen to look in *this* repo for
-#    config/ and layer/; nothing in the tool's clone is modified.
-sudo ../rpi-image-gen/rpi-image-gen build -S "$PWD" -c zbitx-bookworm.yaml
+# 2. Build. The wrapper inits submodules, injects stage-zbitx, suppresses
+#    the stock -lite/Desktop image exports, and runs pi-gen as root.
+./scripts/pi-gen-build.sh
+#    Force a clean rebuild (discard cached stage rootfs):
+#    CLEAN=1 ./scripts/pi-gen-build.sh
 ```
 
-Output: `./work/deploy-<version>/zbitx-bookworm.img.zst`, where
-`<version>` is `git describe --tags --always --dirty` (or today's
-date if not a git checkout).
+Output: `vendor/pi-gen/deploy/image_<date>-zbitx-bookworm.img.xz` plus
+(if `syft` is on PATH) an xz-compressed SPDX `.sbom`; a `.info` package
+manifest lands under `vendor/pi-gen/work/*/export-image/`.
 
-The pinned rpi-image-gen version lives in
-`.github/workflows/build.yml` (`RPI_IMAGE_GEN_REF`); bumping CI and
-local builds is a single env-var change.
+The pinned pi-gen version is the `vendor/pi-gen` submodule commit; bump
+it deliberately and review the diff.
 
 ### Building in CI
 
 Push to a branch and let `.github/workflows/build.yml` build it on a
-free arm64 runner. After the build, the workflow boots the rootfs in
-systemd-nspawn and checks that PID 1 reaches `multi-user.target`. The
-`.img.zst`, SBOM, build log, and nspawn boot log are uploaded as
-artifacts.
+free arm64 runner. After the build, the workflow boots the final
+(`stage-zbitx`) rootfs in systemd-nspawn and checks that PID 1 reaches
+`multi-user.target`. The `.img.xz`, SBOM/info, build log, and nspawn
+boot log are uploaded as artifacts.
 
 ## Flashing
 
@@ -131,12 +128,11 @@ is created but locked. This mirrors modern Raspberry Pi OS behavior
 password).
 
 Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
-(v1.8.0 or later — it handles `.img.zst` natively, no manual
-decompression needed):
+(it handles `.img.xz` natively, no manual decompression needed):
 
-1. Unzip the downloaded `zbitx-bookworm-arm64-img.zip` artifact and
-   point Imager at the `zbitx-bookworm.img.zst` inside ("Use custom"
-   in the OS picker).
+1. Unzip the downloaded `zbitx-bookworm-arm64-img` artifact and point
+   Imager at the `*-zbitx-bookworm.img.xz` inside ("Use custom" in the
+   OS picker).
 2. Click the gear icon (or "Edit settings…") **before** writing:
    - **Set username** to `pi` (this is required — zbitxv2 hardcodes
      `/home/pi/sbitx/` paths).
@@ -152,8 +148,9 @@ After boot:
 
 - lightdm auto-logs into the `pi` user (the standard
   `raspi-config nonint do_boot_behaviour B4` "Desktop with autologin"
-  mode). The Pixel/Wayfire desktop session starts;
-  `/etc/xdg/autostart/sBitx.desktop` fires the sbitx GTK UI.
+  mode, set by the stock desktop stage). The Pixel session starts in
+  **X11/openbox** (stage-zbitx pins `do_wayland W1` so the GTK3 sbitx
+  app launches via `/etc/xdg/autostart/sBitx.desktop`).
 - The WiFi AP `zbitx` (passphrase `zbitx12345`) comes up on
   `192.168.4.1`. (Configurable via `/etc/hostapd/hostapd.conf`.)
 - The mongoose web UI is at `http://192.168.4.1/` (iptables redirects
@@ -234,9 +231,17 @@ Operationally, this means:
 
 ## Known limitations
 
-- **Real-hardware validation in progress** — first boot (2026-05-28)
-  surfaced two first-boot defects (rootfs not expanded; `iw` missing),
-  now fixed; a re-flash to confirm the GUI + AP is pending. See Status.
+- **Real-hardware validation pending on the pi-gen base.** The earlier
+  rpi-image-gen build booted to multi-user on real zBitx v1 hardware,
+  but the move to pi-gen rebuilds the whole base (Raspberry Pi OS
+  Desktop) and the WiFi model (NetworkManager client + hostapd `uap0`
+  AP). A flash to confirm the GUI, the AP, and Imager WiFi provisioning
+  is required before this is trusted. See Status.
+- **Concurrent AP + client is an unsupported Pi mode.** Both run on the
+  single onboard radio, forced to the same channel; throughput roughly
+  halves and the link can drop over long uptimes. This is inherent to
+  the hardware, not the recipe — a second USB WiFi adapter is the only
+  fully-supported path. See [docs/architecture.md](docs/architecture.md).
 - **No QEMU boot test in CI.** QEMU's `raspi3b`/`raspi4b` machines
   don't emulate the Pi firmware path well enough to reliably boot a
   Pi OS image to a login prompt, and the WM8731 codec / GPIO / I2C
@@ -253,9 +258,9 @@ Operationally, this means:
 
 - [afarhan/zbitxv2](https://github.com/afarhan/zbitxv2) — the radio
   application itself (vendored as `vendor/sbitx`).
-- [raspberrypi/rpi-image-gen](https://github.com/raspberrypi/rpi-image-gen)
-  — the image builder. Cloned at the pinned `RPI_IMAGE_GEN_REF` tag
-  by CI and local builds; not vendored.
+- [RPi-Distro/pi-gen](https://github.com/RPi-Distro/pi-gen) — the
+  official Raspberry Pi OS build system. Pinned as the `vendor/pi-gen`
+  submodule (bookworm-arm64 branch).
 - [WiringPi/WiringPi](https://github.com/WiringPi/WiringPi) — the
   community-maintained 3.x fork of wiringPi.
 

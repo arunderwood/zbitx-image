@@ -8,8 +8,8 @@ cd /home/pi/sbitx
 # Note: upstream's setup-ap.sh contains an archive.debian.org apt-sources
 # rewrite (lines 42-51) that's appropriate for EOL Buster and harmful on
 # Bookworm. The recipe does NOT execute setup-ap.sh at build time — the
-# AP stack is laid down declaratively via layer/files/etc/{hostapd,
-# dnsmasq.d,systemd/system,dhcpcd.conf.d,iptables}. The script is shipped
+# AP stack is laid down declaratively via the stage-zbitx/02-zbitx-os
+# overlay (etc/{hostapd,dnsmasq.d,systemd/system,iptables}). The script is shipped
 # on the flashed image only for reference; an operator who runs it
 # manually on a built image would hit the apt-sources problem, but that's
 # a niche path we don't try to defend against. See docs/bookworm-patches.md

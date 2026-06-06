@@ -1,0 +1,8 @@
+# stage-zbitx is the image-exporting stage: it produces the final zbitx image
+# (Raspberry Pi OS Desktop + the zbitx delta). No suffix — this is THE image.
+# stage2 (-lite) and stage4 (desktop) exports are suppressed at build time by
+# scripts/pi-gen-build.sh, which drops a SKIP_IMAGES marker in each.
+IMG_SUFFIX=""
+if [ "${USE_QEMU}" = "1" ]; then
+	export IMG_SUFFIX="${IMG_SUFFIX}-qemu"
+fi

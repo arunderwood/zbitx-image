@@ -1,0 +1,7 @@
+# iptables-persistent prompts "save current rules?" on install. In the
+# non-interactive build chroot there are no live rules to save and a prompt
+# would stall the build, so preseed both answers to false. The rules we want
+# ship as /etc/iptables/rules.v{4,6} overlays and are loaded at boot by
+# netfilter-persistent.
+iptables-persistent iptables-persistent/autosave_v4 boolean false
+iptables-persistent iptables-persistent/autosave_v6 boolean false

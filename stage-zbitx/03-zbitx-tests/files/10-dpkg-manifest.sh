@@ -1,7 +1,7 @@
 #!/bin/sh
 # Verify packages that came from non-apt sources actually registered with
 # dpkg. We deliberately do NOT check every apt-installed package — those
-# all came through mmdebstrap's `packages:` list, and a failure there
+# all came through the stage package list, and a failure there
 # would have aborted the build long before tests run. Checking them
 # again here is fluff.
 #
