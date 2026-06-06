@@ -38,7 +38,8 @@ Known limitations.
 - WiringPi 3.x (Gordon's unofficial fork — drogon.net is offline).
 - FFTW3 double + single precision from Bookworm packages
   (`libfftw3-dev` + `libfftw3-single3`).
-- The zbitxv2 binary, built from a pinned submodule SHA.
+- The zbitxv2 binary, built from a pinned submodule SHA into
+  `/home/pi/sbitx`.
 - WiFi: a **hybrid** model. NetworkManager (stock) keeps `wlan0` as the
   client, so RPi Imager WiFi provisioning works out of the box; the
   `zbitx` AP (SSID `zbitx`, IP `192.168.4.1`) runs as hostapd + dnsmasq
@@ -52,7 +53,6 @@ Known limitations.
 - AudioInjector WM8731 dtoverlay + GPIO/I2C/I2S enabled in
   `config.txt`; the desktop audio stack (pipewire/pulseaudio) masked so
   it can't grab the codec.
-- WiringPi 3.x and the zbitxv2 binary, built into `/home/pi/sbitx`.
 
 ## Repo layout
 

@@ -15,8 +15,10 @@ EOF
 
 # ---- zbitxv2 source -> /home/${FIRST_USER_NAME}/sbitx + build ----
 # sbitx hardcodes /home/pi/sbitx paths (sbitx.c, fft_filter.c), which is why
-# FIRST_USER_NAME is pinned to `pi` and DISABLE_FIRST_BOOT_USER_RENAME=1 keeps
-# it that way. ${ZBITX_SRCDIR} is the vendored submodule (set in ./config).
+# FIRST_USER_NAME is pinned to `pi` in pi-gen.config. The account is left locked
+# and 02-zbitx-os removes piwiz.desktop so first boot can't rename `pi` (we
+# deliberately avoid DISABLE_FIRST_BOOT_USER_RENAME=1, which would force a baked
+# password). ${ZBITX_SRCDIR} is the vendored submodule (set in pi-gen.config).
 HOME_DIR="${ROOTFS_DIR}/home/${FIRST_USER_NAME}"
 rm -rf "${HOME_DIR}/sbitx"
 cp -a "${ZBITX_SRCDIR}" "${HOME_DIR}/sbitx"
