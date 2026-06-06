@@ -2,18 +2,11 @@ work/
 deploy/
 *.img
 *.img.xz
-*.img.zst
 *.sbom.json
 *.sbom.spdx.json
 .cache/
 
-# Vendored downloads fetched by hooks
-vendor/downloads/
 build-log.zip
 build.log
-qemu-log.zip
-qemu.log
-qemu-serial.log
-qemu-stdout.log
 nspawn-log.zip
 nspawn.log
