@@ -3,6 +3,10 @@ name: build-image
 on:
   push:
     branches: [main]
+    # Tag pushes are releases — they build AND keep the image (see the gated
+    # artifact steps). Narrow to a pattern (e.g. ['v*']) if non-release tags
+    # are ever used.
+    tags: ['*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -114,6 +118,15 @@ jobs:
       - name: Build image
         id: build
         continue-on-error: true
+        # Release runs (main / tags) compress the image with xz -6 for a small
+        # flashable artifact. Throwaway runs (PR / branch / manual dispatch) set
+        # DEPLOY_COMPRESSION=none to skip the multi-minute xz pass entirely — the
+        # image is never uploaded, and the nspawn boot test reads the
+        # uncompressed rootfs, so nothing here depends on a compressed image.
+        # github.ref is inlined (not via an env var) so a release can never fall
+        # through to 'none'; pi-gen.config provides the xz/-6 defaults.
+        env:
+          DEPLOY_COMPRESSION: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && 'xz' || 'none' }}
         run: |
           set -x
           ./scripts/pi-gen-build.sh 2>&1 | tee build.log
@@ -255,12 +268,17 @@ jobs:
           exit 1
 
       - name: Stage flashable artifact
+        # Only release runs (main / tags) keep the image; PR / branch / dispatch
+        # runs build + boot-test it to prove the pipeline, then throw it away
+        # (and skip xz above). Same gate on the two upload steps below.
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         # Flatten the deploy dir so the .img.xz sits at the top of the artifact.
         run: |
           mkdir -p _artifact
           cp vendor/pi-gen/deploy/*-zbitx-bookworm.img.xz _artifact/
 
       - name: Upload image artifact
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz — the file Raspberry
         # Pi Imager flashes (it handles .xz natively).
         #
@@ -278,6 +296,8 @@ jobs:
           retention-days: 14
 
       - name: Upload SBOM artifact
+        # Tied to the image: only kept on release runs (main / tags).
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         # pi-gen deploys the SPDX SBOM (xz-compressed) when syft is present.
         # The .info package manifest stays under work/export-image/.
         uses: actions/upload-artifact@v7
