@@ -261,13 +261,19 @@ jobs:
           cp vendor/pi-gen/deploy/*-zbitx-bookworm.img.xz _artifact/
 
       - name: Upload image artifact
-        # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz. That's what
-        # Raspberry Pi Imager flashes (it handles .xz natively). The stock
-        # .info package manifest ships alongside as the SBOM-adjacent record.
+        # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz — the file Raspberry
+        # Pi Imager flashes (it handles .xz natively).
+        #
+        # archive: false uploads it as a BARE file with no zip wrapper (GitHub
+        # Actions gained this 2026-02-26; needs upload-artifact v7 +
+        # download-artifact v8). So the download is the raw .img.xz, not a .zip
+        # you must unpack first. Caveats of archive: false: it accepts exactly
+        # one file (we emit exactly one image), and it IGNORES `name:` — the
+        # artifact is named after the file, e.g. 2026-06-06-zbitx-bookworm.img.xz.
         uses: actions/upload-artifact@v7
         with:
-          name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
           path: _artifact/*-zbitx-bookworm.img.xz
+          archive: false
           if-no-files-found: warn
           retention-days: 14
 
@@ -282,3 +288,6 @@ jobs:
             vendor/pi-gen/work/*/export-image/*.info
           if-no-files-found: warn
           retention-days: 90
+          # *.sbom* is xz-compressed; store rather than re-DEFLATE it. The .info
+          # is tiny text, so the level barely matters either way.
+          compression-level: 0
