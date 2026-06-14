@@ -37,5 +37,5 @@ export ZBITX_ROOT="${REPO_ROOT}"
 
 echo "==> Building zbitx image via pi-gen ($(git -C "${PIGEN}" rev-parse --short HEAD))"
 cd "${PIGEN}"
-exec sudo --preserve-env=ZBITX_ROOT,CLEAN,CONTINUE,USE_QEMU,APT_PROXY \
+exec sudo --preserve-env=ZBITX_ROOT,CLEAN,CONTINUE,USE_QEMU,APT_PROXY,DEPLOY_COMPRESSION,COMPRESSION_LEVEL \
 	./build.sh -c "${REPO_ROOT}/pi-gen.config"

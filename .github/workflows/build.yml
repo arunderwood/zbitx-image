@@ -3,9 +3,21 @@ name: build-image
 on:
   push:
     branches: [main]
+    # Tag pushes are releases — they build AND keep the image (see the gated
+    # artifact steps). Narrow to a pattern (e.g. ['v*']) if non-release tags
+    # are ever used.
+    tags: ['*']
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# Cancel an in-flight run when a newer commit lands on the same ref (e.g. a PR
+# force-push). The full pi-gen build is long; letting superseded runs finish
+# just burns runner-hours. main pushes get a distinct group so releases aren't
+# cancelled by a follow-up merge.
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -41,13 +53,50 @@ jobs:
         # Matches pi-gen's `depends` manifest (its dependencies_check is
         # unconditional — it wants qemu-user-static present even on a native
         # arm64 runner, though binfmt itself is then unused). Plus bmap-tools
-        # for the optional .bmap.
+        # for the optional .bmap, systemd-container for the later nspawn boot
+        # test, and apt-cacher-ng as the local apt proxy (see "apt cache" steps).
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             quilt parted coreutils qemu-user-static debootstrap zerofree zip \
             dosfstools e2fsprogs libcap2-bin libarchive-tools grep rsync \
-            xz-utils curl xxd file git kmod bc gpg pigz arch-test bmap-tools
+            xz-utils curl xxd file git kmod bc gpg pigz arch-test bmap-tools \
+            systemd-container apt-cacher-ng
+          # Quiesce the proxy so its cache dir is settled before we restore the
+          # persisted store into it on the next step.
+          sudo systemctl stop apt-cacher-ng
+
+      - name: Restore apt-cacher-ng cache
+        # pi-gen's APT_PROXY (set below) routes every in-chroot apt download
+        # across stage0..4 + stage-zbitx through apt-cacher-ng. Persisting its
+        # store turns repeat-run package *downloads* into local cache hits
+        # (installs/unpack still run). The proxy is stripped from the image by
+        # pi-gen, so nothing leaks into the artifact (README: APT_PROXY).
+        #
+        # Rolling key (run_id) so the primary key always misses and the post-job
+        # save writes a fresh superset; restore-keys recovers the latest prior
+        # store. Keyed on the package-bearing inputs so a stage/dep change rolls
+        # a new lineage rather than reusing a now-irrelevant store.
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt-cacher-ng
+          key: aptcache-${{ matrix.release }}-${{ matrix.arch }}-${{ hashFiles('stage-zbitx/**', 'pi-gen.config', '.github/workflows/build.yml') }}-${{ github.run_id }}
+          restore-keys: |
+            aptcache-${{ matrix.release }}-${{ matrix.arch }}-${{ hashFiles('stage-zbitx/**', 'pi-gen.config', '.github/workflows/build.yml') }}-
+            aptcache-${{ matrix.release }}-${{ matrix.arch }}-
+
+      - name: Start apt-cacher-ng proxy
+        # Hand the restored store back to apt-cacher-ng's own user (actions/cache
+        # extracts as the runner user) so it can update index files, then start
+        # it and point pi-gen at it. APT_PROXY is read from the environment by
+        # pi-gen's build.sh (which writes it into each chroot's apt.conf, then
+        # strips it before export) and is preserved through the sudo by
+        # scripts/pi-gen-build.sh's --preserve-env list.
+        run: |
+          sudo mkdir -p /var/cache/apt-cacher-ng
+          sudo chown -R apt-cacher-ng:apt-cacher-ng /var/cache/apt-cacher-ng
+          sudo systemctl start apt-cacher-ng
+          echo "APT_PROXY=http://127.0.0.1:3142" >> "$GITHUB_ENV"
 
       - name: Install syft (for SBOM)
         # pi-gen's finalise stage generates an SPDX SBOM if `syft` is on PATH.
@@ -69,6 +118,15 @@ jobs:
       - name: Build image
         id: build
         continue-on-error: true
+        # Release runs (main / tags) compress the image with xz -6 for a small
+        # flashable artifact. Throwaway runs (PR / branch / manual dispatch) set
+        # DEPLOY_COMPRESSION=none to skip the multi-minute xz pass entirely — the
+        # image is never uploaded, and the nspawn boot test reads the
+        # uncompressed rootfs, so nothing here depends on a compressed image.
+        # github.ref is inlined (not via an env var) so a release can never fall
+        # through to 'none'; pi-gen.config provides the xz/-6 defaults.
+        env:
+          DEPLOY_COMPRESSION: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && 'xz' || 'none' }}
         run: |
           set -x
           ./scripts/pi-gen-build.sh 2>&1 | tee build.log
@@ -126,7 +184,7 @@ jobs:
         continue-on-error: true
         run: |
           set -eux
-          sudo apt-get install -y --no-install-recommends systemd-container
+          # systemd-container is installed up front with the other host deps.
           ROOTFS=$(ls -d vendor/pi-gen/work/*/stage-zbitx/rootfs 2>/dev/null | head -1)
           if [ -z "$ROOTFS" ] || [ ! -d "$ROOTFS" ]; then
             echo "FAIL: no stage-zbitx rootfs found under vendor/pi-gen/work" >&2
@@ -210,23 +268,36 @@ jobs:
           exit 1
 
       - name: Stage flashable artifact
+        # Only release runs (main / tags) keep the image; PR / branch / dispatch
+        # runs build + boot-test it to prove the pipeline, then throw it away
+        # (and skip xz above). Same gate on the two upload steps below.
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         # Flatten the deploy dir so the .img.xz sits at the top of the artifact.
         run: |
           mkdir -p _artifact
           cp vendor/pi-gen/deploy/*-zbitx-bookworm.img.xz _artifact/
 
       - name: Upload image artifact
-        # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz. That's what
-        # Raspberry Pi Imager flashes (it handles .xz natively). The stock
-        # .info package manifest ships alongside as the SBOM-adjacent record.
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        # pi-gen writes deploy/<date>-zbitx-bookworm.img.xz — the file Raspberry
+        # Pi Imager flashes (it handles .xz natively).
+        #
+        # archive: false uploads it as a BARE file with no zip wrapper (GitHub
+        # Actions gained this 2026-02-26; needs upload-artifact v7 +
+        # download-artifact v8). So the download is the raw .img.xz, not a .zip
+        # you must unpack first. Caveats of archive: false: it accepts exactly
+        # one file (we emit exactly one image), and it IGNORES `name:` — the
+        # artifact is named after the file, e.g. 2026-06-06-zbitx-bookworm.img.xz.
         uses: actions/upload-artifact@v7
         with:
-          name: zbitx-${{ matrix.release }}-${{ matrix.arch }}-img
           path: _artifact/*-zbitx-bookworm.img.xz
+          archive: false
           if-no-files-found: warn
           retention-days: 14
 
       - name: Upload SBOM artifact
+        # Tied to the image: only kept on release runs (main / tags).
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         # pi-gen deploys the SPDX SBOM (xz-compressed) when syft is present.
         # The .info package manifest stays under work/export-image/.
         uses: actions/upload-artifact@v7
@@ -237,3 +308,6 @@ jobs:
             vendor/pi-gen/work/*/export-image/*.info
           if-no-files-found: warn
           retention-days: 90
+          # *.sbom* is xz-compressed; store rather than re-DEFLATE it. The .info
+          # is tiny text, so the level barely matters either way.
+          compression-level: 0
