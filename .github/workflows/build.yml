@@ -77,7 +77,7 @@ jobs:
         # save writes a fresh superset; restore-keys recovers the latest prior
         # store. Keyed on the package-bearing inputs so a stage/dep change rolls
         # a new lineage rather than reusing a now-irrelevant store.
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /var/cache/apt-cacher-ng
           key: aptcache-${{ matrix.release }}-${{ matrix.arch }}-${{ hashFiles('stage-zbitx/**', 'pi-gen.config', '.github/workflows/build.yml') }}-${{ github.run_id }}
