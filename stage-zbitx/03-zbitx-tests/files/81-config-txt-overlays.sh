@@ -37,4 +37,11 @@ if [ -n "$missing" ]; then
     exit 1
 fi
 
+# HDMI audio must be disabled so the WM8731 codec keeps ALSA card 0 — sbitx
+# hardcodes hw:0 and aborts if vc4hdmi steals index 0. See UPSTREAM.md.
+if ! grep -qE "^[[:space:]]*dtoverlay=vc4-kms-v3d[^[:space:]]*noaudio" "$CONFIG_TXT"; then
+    echo "FAIL: $CONFIG_TXT vc4-kms-v3d overlay missing 'noaudio' (HDMI audio would steal ALSA card 0 from the WM8731 codec)" >&2
+    exit 1
+fi
+
 echo "OK: $CONFIG_TXT has all required zbitx overlay lines"
