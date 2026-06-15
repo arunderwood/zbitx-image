@@ -69,6 +69,9 @@ for s in usr/local/sbin/zbitx-ap-channel \
 	[ -f "${ROOTFS_DIR}/${s}" ] && chmod 0755 "${ROOTFS_DIR}/${s}"
 done
 
+# ---- sBitx terminal launcher: ensure executable (overlay can lose mode) ----
+chmod 0755 "${ROOTFS_DIR}/usr/local/bin/sbitx-launch"
+
 # ---- PulseAudio autospawn bypass (belt-and-braces with the masking below) ----
 if [ -f "${ROOTFS_DIR}/etc/pulse/client.conf" ] && \
    ! grep -q "^autospawn = no" "${ROOTFS_DIR}/etc/pulse/client.conf"; then

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Launch sBitx inside a terminal so a crash or exit leaves a visible,
+# restartable console, instead of the window silently vanishing (the failure
+# mode of the previous headless autostart). Wired from
+# /etc/xdg/autostart/sBitx.desktop via `x-terminal-emulator -e`.
+#
+# Derived from upstream start.sh/start, with the rough edges fixed: a real
+# shebang, a guarded absolute cd (upstream start.sh used a relative `cd sbitx`
+# with no shebang), and honest comments.
+
+# Diagnostic only: name any processes currently holding the ALSA devices.
+# sBitx needs exclusive hw:0; if it can't open the codec, this points at the
+# culprit. fuser does NOT release anything — it only reports. Never let a
+# sudo/fuser hiccup block the launch.
+sudo fuser -vu /dev/snd/* /dev/snd/by-path/* 2>/dev/null || true
+
+cd /home/pi/sbitx || { echo "sbitx dir missing: /home/pi/sbitx" >&2; exec bash; }
+./sbitx
+
+# sBitx exited (crash or quit): keep the terminal open at a shell so the
+# operator can read the output and relaunch with ./sbitx.
+echo
+echo "sBitx exited — you're at a shell in $(pwd). Run ./sbitx to restart."
+exec bash
