@@ -39,6 +39,20 @@ if ! grep -q "# zbitx-sbitx BEGIN" "${CONFIG_TXT}" 2>/dev/null; then
 	EOF
 fi
 
+# ---- Disable HDMI audio so the WM8731 codec keeps ALSA card 0 ----
+# sbitx hardcodes the codec as hw:0 / plughw:0,0. The stock vc4-kms-v3d overlay
+# registers vc4hdmi as an ALSA card that grabs index 0, pushing the WM8731
+# (audioinjectorpi) to a higher index; sbitx then opens the HDMI card, fails to
+# find its mixer controls, and aborts (snd_mixer_selem_has_capture_switch on a
+# NULL elem). `dtparam=audio=off` above only disables the legacy bcm2835 audio,
+# not KMS HDMI audio. Appending ,noaudio drops the HDMI sound cards so the codec
+# falls into the free index 0 (snd-aloop is pinned to 1,2,3). This is a
+# workaround to match brittle hardcoding -- see UPSTREAM.md for the real fix.
+if grep -qE '^[[:space:]]*dtoverlay=vc4-kms-v3d' "${CONFIG_TXT}" && \
+   ! grep -qE '^[[:space:]]*dtoverlay=vc4-kms-v3d[^[:space:]]*noaudio' "${CONFIG_TXT}"; then
+	sed -i -E 's/^([[:space:]]*dtoverlay=vc4-kms-v3d[^[:space:]]*)/\1,noaudio/' "${CONFIG_TXT}"
+fi
+
 # ---- iptables rules: enforce mode (overlay tar can lose it) ----
 for f in "${ROOTFS_DIR}/etc/iptables/rules.v4" "${ROOTFS_DIR}/etc/iptables/rules.v6"; do
 	[ -f "$f" ] && chmod 0644 "$f"
