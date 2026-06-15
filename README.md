@@ -66,10 +66,13 @@ zbitxv2-image/
 │   ├── 01-zbitx-app/               #   WiringPi + sBitx source build
 │   ├── 02-zbitx-os/                #   overlays, config.txt, audio masking, AP, X11
 │   └── 03-zbitx-tests/             #   in-chroot smoke tests (build-time gate)
-├── scripts/pi-gen-build.sh         # build wrapper (injects stage + suppresses extra images)
+├── scripts/
+│   ├── pi-gen-build.sh             # build wrapper (injects stage + suppresses extra images)
+│   └── inspect-reference-image.sh  # mount the official image read-only (WSL) for comparison
 ├── docs/
 │   ├── architecture.md             # recipe layout + validation tiers
-│   └── bookworm-patches.md         # divergences from upstream zbitxv2
+│   ├── bookworm-patches.md         # divergences from upstream zbitxv2
+│   └── inspecting-the-reference-image.md  # open the maintainer's image to find ground truth
 ├── vendor/pi-gen/                  # submodule, pinned (bookworm-arm64 branch)
 ├── vendor/sbitx/                   # submodule, pinned zbitxv2 SHA
 └── .github/workflows/build.yml     # CI on ubuntu-24.04-arm + nspawn boot test
