@@ -104,4 +104,19 @@ on_chroot <<-EOF
 	# Keep the AP channel matched to wlan0 even after a seamless upstream
 	# channel switch (the NM dispatcher only fires on (re)association).
 	systemctl enable zbitx-ap-follow-channel.timer
+
+	# ---- Enable VNC for remote control over WiFi ----
+	# realvnc-vnc-server ships in the stock Desktop stage (stage4's
+	# 00-packages-nr), so nothing is added to 00-packages. Enable its
+	# service-mode unit so VNC starts at boot and mirrors the live X11 :0
+	# autologin session; operators connect over wlan0 or the zbitx AP on
+	# port 5900 to drive the radio's screen. This is what `raspi-config
+	# nonint do_vnc 0` does, but we enable the unit directly: do_vnc also
+	# `systemctl start`s it, which fails in the chroot (no running PID 1) and
+	# would abort the build. Auth is RealVNC's default SystemAuth — connect
+	# as `pi` with the password the operator provisions via Raspberry Pi
+	# Imager, so no credential is baked (matches this image's posture). Relies
+	# on the X11 session pinned above; service mode needs a real :0 display
+	# (the default Wayland session would have no X display to capture).
+	systemctl enable vncserver-x11-serviced.service
 EOF
