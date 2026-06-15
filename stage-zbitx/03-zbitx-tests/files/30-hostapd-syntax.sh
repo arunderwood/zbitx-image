@@ -30,4 +30,12 @@ if ! grep -qE '^ssid=zbitx$' "$CONF"; then
     exit 1
 fi
 
+# channel=0 (ACS) is unsupported by the Pi's brcmfmac driver and makes hostapd
+# fail to start the AP. The shipped default must be a fixed channel; the live
+# value is matched to wlan0 at runtime by zbitx-ap-channel.
+if grep -qE '^channel=0$' "$CONF"; then
+    echo "FAIL: channel=0 (ACS) is unsupported on brcmfmac; ship a fixed channel" >&2
+    exit 1
+fi
+
 echo "OK: hostapd.conf has all required keys"

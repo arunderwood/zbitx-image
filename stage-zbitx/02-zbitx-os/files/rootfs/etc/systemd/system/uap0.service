@@ -2,16 +2,27 @@
 Description=Create virtual uap0 interface for zbitx WiFi AP
 Before=hostapd.service dnsmasq.service
 Wants=network.target
-After=sys-subsystem-net-devices-wlan0.device
+# Order after wlan0 appears AND after systemd-rfkill has restored the saved
+# radio state, otherwise the interface can still be rfkill-soft-blocked when
+# we bring it up (ip link set up -> "Operation not possible due to RF-kill").
+After=sys-subsystem-net-devices-wlan0.device systemd-rfkill.service
 ConditionPathExists=/sys/class/net/wlan0
 
 [Service]
 Type=oneshot
-ExecStart=/sbin/iw dev wlan0 interface add uap0 type __ap
+RemainAfterExit=yes
+# Make sure the radio is unblocked before we touch it.
+ExecStartPre=/usr/sbin/rfkill unblock wlan
+# Tear down any stale uap0 from a previous (re)start so "interface add" below
+# doesn't fail with EEXIST.
+ExecStartPre=-/sbin/iw dev uap0 del
+# brcmfmac frequently reports the freshly-probed wlan0 as busy for a second or
+# two at boot, which is why this oneshot raced and failed before NetworkManager
+# came up. Retry the virtual-interface creation a few times before giving up.
+ExecStart=/bin/sh -c 'for i in $(seq 1 10); do /sbin/iw dev wlan0 interface add uap0 type __ap && exit 0; sleep 1; done; exit 1'
 ExecStart=/sbin/ip addr add 192.168.4.1/24 dev uap0
 ExecStart=/sbin/ip link set uap0 up
 ExecStop=/sbin/iw dev uap0 del
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target

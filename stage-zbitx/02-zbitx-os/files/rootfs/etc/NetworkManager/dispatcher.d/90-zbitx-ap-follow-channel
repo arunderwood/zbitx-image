@@ -1,0 +1,29 @@
+#!/bin/sh
+# NetworkManager dispatcher: keep the zbitx AP on the same channel as the
+# wlan0 STA.
+#
+# AP+STA on the Pi's single brcmfmac radio is same-channel only. The channel
+# wlan0 ends up on isn't known until it associates — which at boot usually
+# happens *after* hostapd has already started (so hostapd's ExecStartPre
+# zbitx-ap-channel fell back to the default), and can change later if wlan0
+# reconnects to a different network. When that happens, re-point hostapd at the
+# new channel and restart it so the AP follows. Without this the AP can sit on
+# the wrong channel and the front panel never associates.
+#
+# NetworkManager calls dispatcher scripts as: <script> <interface> <action>.
+set -eu
+
+IFACE="${1:-}"
+ACTION="${2:-}"
+
+# Only care about the STA radio, and only actions that can mean a (new) channel.
+[ "$IFACE" = "wlan0" ] || exit 0
+case "$ACTION" in
+	up|dhcp4-change|dhcp6-change) ;;
+	*) exit 0 ;;
+esac
+
+# Re-point the AP and bounce hostapd only if the channel actually moved.
+# (zbitx-ap-follow-channel.timer runs the same reconcile as a safety net for
+# seamless CSA channel switches that don't produce an NM event.)
+exec /usr/local/sbin/zbitx-ap-reconcile

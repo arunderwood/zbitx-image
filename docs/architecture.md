@@ -121,12 +121,35 @@ point** as `hostapd` + `dnsmasq` on a virtual `uap0` interface created by
 leave `uap0` alone so it doesn't race hostapd. `dhcpcd` is not used
 (NM owns `wlan0`; `uap0.service` assigns the AP's static IP itself).
 
+Because AP+STA shares one channel, the AP must track `wlan0`.
+`zbitx-ap-channel` (a pure renderer) writes `wlan0`'s current channel
+into `hostapd.conf`; `zbitx-ap-reconcile` wraps it and restarts hostapd
+only if the channel actually moved. Three triggers keep the AP aligned:
+
+1. **`ExecStartPre` on `hostapd.service`** runs `zbitx-ap-channel` at AP
+   start (covers a hostapd restart while `wlan0` is already up).
+2. **NM dispatcher `90-zbitx-ap-follow-channel`** runs `zbitx-ap-reconcile`
+   when `wlan0` (re)associates — at boot `wlan0` usually associates
+   *after* hostapd has started, and the STA can reconnect on a new
+   channel.
+3. **`zbitx-ap-follow-channel.timer`** runs `zbitx-ap-reconcile` every
+   minute as a safety net for *seamless* upstream channel switches (CSA):
+   the firmware drags the AP onto `wlan0`'s new channel, but `wlan0`
+   stays associated so NM fires no dispatcher event — without the timer
+   hostapd would keep beaconing the old channel and clients would drop.
+
+`channel=0` (ACS) is **not** used: brcmfmac has no survey-dump support,
+so ACS fails to bring up the BSS. The AP is 2.4 GHz (`hw_mode=g`); a
+5 GHz STA channel can't be followed and is ignored (the Pi's single
+radio can't straddle bands anyway).
+
 Why this split rather than a pure-NetworkManager AP: **concurrent AP+STA
 on the Pi's single onboard radio is an officially unsupported mode**
 ("educational use only" per RaspAP; not advertised by the Pi
 Foundation). It forces both interfaces onto the same channel
-(`hostapd.conf` uses `channel=0` to follow the client), roughly halves
-throughput, and has known long-uptime drop bugs
+(`zbitx-ap-channel`, an `ExecStartPre` on `hostapd.service`, pins the AP
+to the live `wlan0` channel — `channel=0`/ACS is unsupported on
+brcmfmac), roughly halves throughput, and has known long-uptime drop bugs
 ([bookworm-feedback#220](https://github.com/raspberrypi/bookworm-feedback/issues/220)).
 Since the concurrency is the fragile part *regardless of tooling*, and
 even RaspAP's NetworkManager-based solution runs the AP via hostapd on a

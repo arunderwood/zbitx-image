@@ -1,0 +1,32 @@
+#!/bin/sh
+# zbitx-ap-reconcile — make the running AP match wlan0's current channel.
+#
+# Re-renders hostapd.conf via zbitx-ap-channel and, if the channel actually
+# moved, restarts hostapd so the AP hops to wlan0's channel. AP+STA shares one
+# radio, so when the upstream router changes channel the firmware drags the AP
+# along but hostapd keeps beaconing the old channel until it's restarted.
+#
+# Called two ways:
+#   - NetworkManager dispatcher (90-zbitx-ap-follow-channel): fast path, fires
+#     when wlan0 (re)associates.
+#   - zbitx-ap-follow-channel.timer: slow path / safety net, catches seamless
+#     channel switches (CSA) that keep wlan0 associated and so produce no NM
+#     event.
+#
+# hostapd.conf is only rewritten in lockstep with a hostapd (re)start, so the
+# channel= in the file always reflects the running AP's channel — that's what
+# makes the before/after compare a valid "did it move?" test.
+set -eu
+
+CONF=/etc/hostapd/hostapd.conf
+
+read_channel() { awk -F= '/^channel=/{print $2; exit}' "$CONF" 2>/dev/null || true; }
+
+before=$(read_channel)
+/usr/local/sbin/zbitx-ap-channel
+after=$(read_channel)
+
+if [ "$before" != "$after" ] && systemctl is-active --quiet hostapd; then
+	logger -t zbitx-ap-reconcile "wlan0 now on channel ${after}; restarting hostapd (was ${before})" || true
+	systemctl restart hostapd || true
+fi
