@@ -2,7 +2,7 @@
 Type=Application
 Name=sBitx
 Comment=zBitx SDR amateur radio transceiver
-Exec=/home/pi/sbitx/sbitx
+Exec=x-terminal-emulator -e /usr/local/bin/sbitx-launch
 Path=/home/pi/sbitx
 Icon=/home/pi/sbitx/sbitx_icon.png
 Terminal=false
