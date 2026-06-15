@@ -1,0 +1,9 @@
+[Unit]
+Description=Reconcile the zbitx AP channel with the wlan0 STA channel
+# Pointless unless the AP is actually running.
+After=hostapd.service
+ConditionPathExists=/sys/class/net/wlan0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/zbitx-ap-reconcile

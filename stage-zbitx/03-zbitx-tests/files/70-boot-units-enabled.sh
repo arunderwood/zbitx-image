@@ -10,7 +10,8 @@
 set -eu
 
 failed=""
-for unit in uap0.service hostapd.service dnsmasq.service netfilter-persistent.service; do
+for unit in uap0.service hostapd.service dnsmasq.service netfilter-persistent.service \
+            zbitx-ap-follow-channel.timer; do
     state=$(systemctl --root=/ is-enabled "$unit" 2>/dev/null || true)
     case "$state" in
         enabled|enabled-runtime|static|alias) ;;

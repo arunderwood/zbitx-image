@@ -58,6 +58,17 @@ for f in "${ROOTFS_DIR}/etc/iptables/rules.v4" "${ROOTFS_DIR}/etc/iptables/rules
 	[ -f "$f" ] && chmod 0644 "$f"
 done
 
+# ---- AP channel helper + NM dispatcher: enforce exec bit ----
+# hostapd's ExecStartPre runs zbitx-ap-channel to match the AP channel to the
+# wlan0 STA; the dispatcher re-runs it (and bounces hostapd) when wlan0 changes
+# channel later. NetworkManager refuses to run dispatcher scripts that aren't
+# executable or are group/world-writable, so pin 0755 (overlay tar can lose it).
+for s in usr/local/sbin/zbitx-ap-channel \
+         usr/local/sbin/zbitx-ap-reconcile \
+         etc/NetworkManager/dispatcher.d/90-zbitx-ap-follow-channel; do
+	[ -f "${ROOTFS_DIR}/${s}" ] && chmod 0755 "${ROOTFS_DIR}/${s}"
+done
+
 # ---- PulseAudio autospawn bypass (belt-and-braces with the masking below) ----
 if [ -f "${ROOTFS_DIR}/etc/pulse/client.conf" ] && \
    ! grep -q "^autospawn = no" "${ROOTFS_DIR}/etc/pulse/client.conf"; then
@@ -87,4 +98,7 @@ on_chroot <<-EOF
 	# 99-zbitx-uap0-unmanaged.conf overlay. dhcpcd is not used.
 	systemctl unmask hostapd || true
 	systemctl enable uap0.service hostapd dnsmasq
+	# Keep the AP channel matched to wlan0 even after a seamless upstream
+	# channel switch (the NM dispatcher only fires on (re)association).
+	systemctl enable zbitx-ap-follow-channel.timer
 EOF

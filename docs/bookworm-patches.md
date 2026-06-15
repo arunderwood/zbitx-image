@@ -90,8 +90,10 @@ are candidates to upstream once they're proven on real hardware.
   Pi's single onboard radio is an officially **unsupported** mode
   ("educational use only" per RaspAP; not advertised by the Pi
   Foundation). Both interfaces are forced onto the same channel
-  (`hostapd.conf` uses `channel=0` to follow the client), throughput
-  roughly halves, and the link can drop over long uptimes
+  (`zbitx-ap-channel` runs as an `ExecStartPre` on `hostapd.service` and
+  pins the AP to the live `wlan0` channel; `channel=0`/ACS doesn't work
+  on brcmfmac), throughput roughly halves, and the link can drop over
+  long uptimes
   ([bookworm-feedback#220](https://github.com/raspberrypi/bookworm-feedback/issues/220)).
   A second USB WiFi adapter is the only fully-supported path. The
   hostapd-on-`uap0` approach is kept (rather than a NetworkManager-native

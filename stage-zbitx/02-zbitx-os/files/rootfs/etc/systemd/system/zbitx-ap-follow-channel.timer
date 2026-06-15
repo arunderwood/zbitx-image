@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodically reconcile the zbitx AP channel with the wlan0 STA
+
+[Timer]
+# Safety net for seamless CSA channel switches that keep wlan0 associated and
+# so fire no NetworkManager dispatcher event. The dispatcher handles the fast
+# path; this just bounds how long the AP can sit on a stale channel.
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

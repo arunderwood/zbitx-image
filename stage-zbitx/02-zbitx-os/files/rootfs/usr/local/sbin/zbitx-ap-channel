@@ -1,0 +1,46 @@
+#!/bin/sh
+# zbitx-ap-channel — point hostapd's AP channel at the wlan0 STA channel.
+#
+# AP+STA on the Pi's single brcmfmac radio is same-channel only, and the driver
+# can't do ACS (channel=0 fails: no survey-dump support). So, like the upstream
+# setup-ap.sh, we detect the channel wlan0 is currently using and write a fixed
+# channel= into hostapd.conf before hostapd reads it. If wlan0 isn't associated
+# yet (common at boot, before NetworkManager connects), fall back to the value
+# already in the file.
+#
+# This script is a pure renderer: it only edits hostapd.conf, never restarts
+# hostapd (it runs as hostapd's own ExecStartPre). zbitx-ap-reconcile is the
+# wrapper that restarts hostapd when the channel actually moved.
+set -eu
+
+CONF=/etc/hostapd/hostapd.conf
+STA=wlan0
+
+[ -w "$CONF" ] || { echo "zbitx-ap-channel: $CONF not writable" >&2; exit 0; }
+
+# `iw dev wlan0 info` prints e.g. "channel 6 (2437 MHz), width: 20 MHz, ..."
+# only while associated/active; empty otherwise.
+ch=$(iw dev "$STA" info 2>/dev/null | awk '/^[[:space:]]*channel /{print $2; exit}')
+
+case "$ch" in
+	''|*[!0-9]*)
+		echo "zbitx-ap-channel: $STA has no channel yet; keeping hostapd.conf default"
+		exit 0
+		;;
+esac
+
+# hostapd.conf is hw_mode=g (2.4 GHz, channels 1-14). A 5 GHz STA channel can't
+# be matched on the 2.4 GHz AP, and the Pi's single radio can't straddle bands
+# anyway — keep the default rather than write an invalid channel.
+if [ "$ch" -gt 14 ]; then
+	echo "zbitx-ap-channel: $STA on 5 GHz channel ${ch}; can't follow on 2.4 GHz AP, keeping default"
+	exit 0
+fi
+
+if grep -qE "^channel=${ch}$" "$CONF"; then
+	echo "zbitx-ap-channel: hostapd already on channel ${ch}"
+	exit 0
+fi
+
+sed -i -E "s/^channel=.*/channel=${ch}/" "$CONF"
+echo "zbitx-ap-channel: set hostapd channel to ${ch} (matching ${STA})"
