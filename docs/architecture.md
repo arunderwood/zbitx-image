@@ -168,6 +168,44 @@ sets `autospawn = no`. The desktop session is pinned to **X11/openbox**
 `/etc/xdg/autostart`, which the openbox session honors and the default
 labwc/Wayland session does not.
 
+### Remote access: VNC over WiFi
+
+The radio can be driven remotely over WiFi. `02-zbitx-os` enables
+**RealVNC in service mode** (`vncserver-x11-serviced.service`), which
+mirrors the live X11 `:0` autologin session — so a VNC client sees the
+same sBitx screen the physical display shows, not a separate virtual
+desktop. `realvnc-vnc-server` already ships in the stock Desktop stage
+(stage4's `00-packages-nr`), so nothing is added to `00-packages`; the
+stage only enables the unit.
+
+This is what `raspi-config nonint do_vnc 0` does, but the recipe enables
+the unit directly: `do_vnc` also `systemctl start`s it, which fails in
+the build chroot (no running PID 1). Enabling the unit is enough — at
+boot it attaches to the `:0` session brought up by desktop autologin.
+**It depends on the X11/openbox pin** (`do_wayland W1`, see "Audio +
+display"): RealVNC service mode captures an X display, and the default
+labwc/Wayland session would have none.
+
+Reachability and auth:
+
+- **Port 5900**, reachable over both `wlan0` (the client network) and the
+  `zbitx` AP (`uap0`). The iptables rules only NAT-redirect port 80→8080;
+  the filter table is default-ACCEPT, so 5900 is not blocked.
+- **Authentication is RealVNC's default SystemAuth** — connect as user
+  `pi` with the password the operator provisions via Raspberry Pi Imager
+  (`firstrun.sh`). No VNC credential is baked, matching the image's
+  "ship no default password" posture. Corollary: an image flashed with
+  *no* Imager password leaves `pi` locked, so VNC accepts no login until
+  a password is set.
+
+The reference image, by contrast, ships `realvnc-vnc-server` installed
+but **never enabled** (no `multi-user.target.wants` symlink, empty
+`/root/.vnc/config.d`, no passwd) — so its VNC does not listen on a
+booted radio. This build deliberately enables it.
+
+Guarded by `03-zbitx-tests/files/87-vnc-enabled.sh` (asserts the server
+is present and the unit is enabled).
+
 ### `docs/` and `vendor/`
 
 - `bookworm-patches.md` — divergences from upstream zbitxv2 (still
