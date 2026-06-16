@@ -5,6 +5,16 @@ and other owner reports — hardware fixes, software tips, operating gotchas, an
 anything else worth not losing in the mailing-list archive. These are notes
 **about owning and running a zBitx**, distinct from this image's build recipe.
 
+## Official documentation
+
+- **zBitx User Manual** (HF Signals, Feb 2025) —
+  [download page](https://www.sbitx.net/index.php/zbitx-user-manual-download/) ·
+  [direct PDF](http://www.sbitx.net/wp-content/uploads/2025/02/zBitx-User-Manual-.pdf).
+  Covers setup, text entry, basic operation, modes (CW / FT8 / LSB / USB / AM),
+  bandwidth & filters, logging, software updates, and backup. The vendor's
+  authoritative reference for stock-firmware behavior; support is
+  `support@hfsignals.com`.
+
 > **Caveat.** Entries come from individual operators and have not been verified
 > by the maintainer or against a schematic/firmware revision here. Confirm
 > details against your own hardware, and treat reported results as one person's
