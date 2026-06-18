@@ -34,7 +34,7 @@ jobs:
         # vendor/pi-gen (the build tooling, pinned in .gitmodules to the
         # bookworm-arm64 branch) and vendor/sbitx (the app source) both come in
         # as submodules. fetch-depth: 0 so build.sh's `git describe` works.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 0
